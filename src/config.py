@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('--transformer', type=str, default='bert-base-cased')
     parser.add_argument('--seq_process_type', type=str, default='sd', help='choose type of sequence prcess, sd: sliding windows, o: original (as SAIS)')
 
+    parser.add_argument('--graph_type', type=str, default='rgcn')
     parser.add_argument('--type_dim', type=int, default=20)
     parser.add_argument('--graph_layers', type=int, default=2, help='min = 2')
 

@@ -6,7 +6,9 @@ from torch_geometric.utils import to_undirected
 from torch.nn.utils.rnn import pad_sequence
 from models.transformers import Transformer
 from models.rgcn import RGCN
+from models.rgat import RGAT
 from models.cnn import CNN
+
 
 
 class Model(nn.Module):
@@ -23,12 +25,18 @@ class Model(nn.Module):
             self.hidden_dim = 768
         
         self.num_node_types = 3
-
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
-        self.rgcn = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
-        self.cnn = CNN(emb_size, device=self.cfg.device)
-        self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
+       
+        if self.cfg.graph_type == 'rgcn':
+            self.graph_model = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
+            self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
+        elif self.cfg.graph_type == 'rgat':
+            self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
+            self.ht_extractor = nn.Linear(emb_size*18, emb_size*2) 
+        else:
+            raise Exception("Define graph model.")
 
+        self.cnn = CNN(emb_size, device=self.cfg.device)
 
         self.MIP_Linear = nn.Sequential(
             nn.Linear(emb_size * 5, emb_size * 2),
@@ -49,7 +57,6 @@ class Model(nn.Module):
 
     def compute_entity_embs(self, batch_token_embs, batch_start_mpos, num_entity_per_doc):
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_entity_per_doc).unsqueeze(-1).to(self.cfg.device)
-        # batch_token_embs = F.pad(batch_token_embs, (0, 0, 0, 1), value=self.cfg.small_negative) #NOTE: can optimize.
         batch_entity_embs = batch_token_embs[batch_did, batch_start_mpos].logsumexp(dim=-2)
 
         return batch_entity_embs
@@ -229,7 +236,7 @@ class Model(nn.Module):
         edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
         edges = torch.cat(edges, dim=-1)
 
-        gcn_nodes = self.rgcn(batch_node_embs, nodes_type, edges, edges_type)
+        gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges, edges_type)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max

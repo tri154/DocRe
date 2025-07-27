@@ -31,6 +31,7 @@ def parse_args_from_trial(trial):
     args.transformer = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
     args.seq_process_type = "sd"
 
+    args.graph_type = 'rgcn'
     args.type_dim = 20
     args.graph_layers = 3
 
