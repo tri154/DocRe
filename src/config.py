@@ -7,6 +7,16 @@ import numpy as np
 import time
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -36,12 +46,12 @@ def parse_args():
     parser.add_argument('--type_dim', type=int, default=20)
     parser.add_argument('--graph_layers', type=int, default=2, help='min = 2')
 
-    parser.add_argument('--use_psd', type=str, default='True')
+    parser.add_argument('--use_psd', type=str2bool, default=True)
     parser.add_argument('--lower_temp', type=float, default=2.0)
     parser.add_argument('--upper_temp', type=float, default=20.0)
     parser.add_argument('--loss_tradeoff', type=float, default=1.0)
 
-    parser.add_argument('--use_sc', type=str, default='True')
+    parser.add_argument('--use_sc', type=str2bool, default=True)
     parser.add_argument('--sc_temp', type=float, default=1.0)
     parser.add_argument('--sc_weight', type=float, default=1.0)
 
@@ -55,9 +65,6 @@ class Config:
     def __init__(self, args=None):
         args = parse_args() if args is None else args
         self.__dict__.update(vars(args))
-
-        self.use_psd = True if self.use_psd == 'True' else False
-        self.use_sc = True if self.use_sc == 'True' else False
 
         # process other configurations.
         self.set_seed()
