@@ -15,17 +15,12 @@ class RGAT(nn.Module):
         [3, 3, 2, 2, 3]
         ])
 
-    # Note: GATConv does not directly take edge_type as input like RGCNConv.
-    # If edge types are important, you might need to handle them differently
-    # (e.g., separate GAT layers for each edge type and aggregate results,
-    # or incorporate edge features directly into node features if feasible).
-
     model = GAT(128, 128, num_node_type=3, type_dim=20, num_layers=2, heads=8)
 
     out = model(x, node_type, edge_index)
     """
 
-    def __init__(self, in_dim, hidden_dim,num_relations=4 , num_node_type=3, type_dim=20, num_layers=2, heads=8, dropout=0.2):
+    def __init__(self, in_dim, hidden_dim , num_node_type=3, type_dim=20, num_layers=2, heads=8, dropout=0.2):
         super(RGAT, self).__init__()
         self.activation = nn.ELU() # GAT often uses ELU activation hidden_dim
         self.num_layers = num_layers
