@@ -42,9 +42,6 @@ class Model(nn.Module):
             nn.Linear(emb_size * 5, emb_size * 2),
             nn.Dropout(0.1)
         )
-        
-        # self.MIP_Linear1 = nn.Linear(emb_size * 5, emb_size * 4)
-        # self.MIP_Linear2 = nn.Linear(emb_size * 4, emb_size * 2)
         self.bilinear = nn.Linear(emb_size * 2, self.cfg.num_rel)
 
         self.loss = Loss(cfg)
@@ -241,17 +238,20 @@ class Model(nn.Module):
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
-        # Compute relation representation, need refactor.
-
+        #=============================
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
         entity_h = gcn_nodes[head_entities + offsets]
         entity_t = gcn_nodes[tail_entities + offsets]
         entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
 
+
+        #=============================
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).to(device)
         relation = relation_map[batch_did, :, head_entities, tail_entities] # 14, 512
+
         
+        #=============================
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
 
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_entity_per_doc).unsqueeze(-1).to(device)
@@ -267,6 +267,8 @@ class Model(nn.Module):
         pair_entities = torch.stack([head_entities, tail_entities], dim=-1)
         e_tw = batch_entity_att[batch_did, pair_entities]
         e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
+
+        #=============================
         
         relation_rep = torch.cat([relation, e_tw, entity_ht], dim=-1)
 
@@ -275,8 +277,6 @@ class Model(nn.Module):
             sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         relation_rep = torch.tanh(self.MIP_Linear(relation_rep))
-        # relation_rep = torch.tanh(self.MIP_Linear1(relation_rep))
-        # relation_rep = torch.tanh(self.MIP_Linear2(relation_rep))
         logits = self.bilinear(relation_rep)
 
         if not is_training:

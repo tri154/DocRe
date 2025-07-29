@@ -68,6 +68,8 @@ class Config:
 
         # process other configurations.
         self.set_seed()
+        assert self.graph_type == 'rgcn' or self.graph_type == 'rgat'
+        self.logging(f"Using graph type: {self.graph_type}.")
 
         self.small_negative = -1e10
         self.small_positive = 1e-10
@@ -132,6 +134,8 @@ class Config:
 
             
     def set_seed(self):
+        self.logging("=" * 50 + "\n\n\n")
+        self.logging(f"Using seed {self.seed}.")
         random.seed(self.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
