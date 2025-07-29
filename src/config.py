@@ -44,7 +44,8 @@ def parse_args():
 
     parser.add_argument('--graph_type', type=str, default='rgcn')
     parser.add_argument('--type_dim', type=int, default=20)
-    parser.add_argument('--graph_layers', type=int, default=2, help='min = 2')
+    parser.add_argument('--low_graph_layers', type=int, default=2, help='min = 2')
+    parser.add_argument('--high_graph_layers', type=int, default=2, help='min = 2')
     parser.add_argument('--distance', type=int, default = 3, help='min = 3')
 
     parser.add_argument('--use_psd', type=str2bool, default=True)

@@ -16,12 +16,16 @@ PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
+# DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
 GRAPH_TYPE='rgcn'
+# GRAPH_TYPE='rgat'
 TYPE_DIM=20
-GRAPH_LAYERS=3 #NOTE min=2
+LOW_GRAPH_LAYERS=2 # NOTE min=2
+HIGH_GRAPH_LAYERS=2
+DISTANCE=5 # NOTE min=3
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -52,7 +56,9 @@ python main.py \
   --seq_process_type $SEQ_PROCESS_TYPE\
   --graph_type $GRAPH_TYPE\
   --type_dim $TYPE_DIM \
-  --graph_layers $GRAPH_LAYERS \
+  --low_graph_layers $LOW_GRAPH_LAYERS \
+  --distance $DISTANCE \
+  --high_graph_layers $HIGH_GRAPH_LAYERS \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \

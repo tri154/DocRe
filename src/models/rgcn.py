@@ -35,16 +35,16 @@ class RGCN(nn.Module):
             self.convs.append(RGCNConv(input_dim, hidden_dim, num_relations))
            
 
-    def forward(self, x, node_type, edge_index, edge_type):
+    def forward(self, x, edge_index, nodes_type, edges_type, **kwargs):
         """
         x: Node feature matrix [num_nodes, in_channels]
         edge_index: Graph connectivity [2, num_edges]
         edge_type: Edge type labels [num_edges]
         """
-        x = torch.cat([x, self.node_emb(node_type)], dim=-1)
+        x = torch.cat([x, self.node_emb(nodes_type)], dim=-1)
         output = list()
         for id, conv in enumerate(self.convs):
-            x = self.activation(conv(x, edge_index, edge_type))
+            x = self.activation(conv(x, edge_index, edges_type))
             if id == 0:
                 output.append(x)
         if self.num_layers != 1:

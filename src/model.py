@@ -30,13 +30,16 @@ class Model(nn.Module):
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
        
         if self.cfg.graph_type == 'rgcn':
-            self.graph_model = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
-            self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
+            self.low_level_graph = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.low_graph_layers)
+            self.ht_extractor = nn.Linear(emb_size*2, emb_size*2)
         elif self.cfg.graph_type == 'rgat':
-            self.graph_model = RGAT(emb_size, emb_size, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
+            # will be error using rgat at that point.
+            self.low_level_graph = RGAT(emb_size, emb_size, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.low_graph_layers)
             self.ht_extractor = nn.Linear(emb_size*18, emb_size*2) 
         else:
             raise Exception("Define graph model.")
+
+        self.high_level_graph = RGAT(emb_size, emb_size, num_node_type=-1, num_layers=self.cfg.high_graph_layers)
 
         self.cnn = CNN(emb_size, device=self.cfg.device)
 
@@ -315,20 +318,18 @@ class Model(nn.Module):
         num_entity_node = torch.sum(num_entity_per_doc).item()
         num_node = len(batch_node_embs)
         high_level_edges = self.get_high_level_links(edges, num_node, num_entity_node, dist=self.cfg.distance)
-        # CONTINUE: apply into rgat.
-        print(high_level_edges)
-        print(num_entity_per_doc)
-        input()
 
         #=========================
 
-        gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges, edges_type)
+        gcn_nodes = self.low_level_graph(batch_node_embs, edges, nodes_type=nodes_type, edges_type=edges_type)
+        gcn_nodes = self.high_level_graph(gcn_nodes[-1][:num_entity_node], high_level_edges)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
-        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
+        gcn_nodes = gcn_nodes[-1]
+        # gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
         # TESTED same as previous.
         graph_features = self.compute_graph_features(gcn_nodes,head_entities, tail_entities, offsets)
@@ -342,6 +343,7 @@ class Model(nn.Module):
                                                  num_entity_per_doc,
                                                  num_mention_per_entity,
                                                  num_rel_per_doc)
+
         rel_features = torch.cat([cnn_features, att_features, graph_features], dim=-1)
 
         sc_loss = 0
