@@ -1,13 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from loss import Loss
 from torch_geometric.utils import to_undirected
 from torch.nn.utils.rnn import pad_sequence
+from collections import deque
+
 from models.transformers import Transformer
 from models.rgcn import RGCN
 from models.rgat import RGAT
 from models.cnn import CNN
+from loss import Loss
 
 
 
@@ -189,7 +191,6 @@ class Model(nn.Module):
         return head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc # reuse
         
     def compute_graph_features(self, gcn_nodes, head_entities, tail_entities, offsets):
-        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
         entity_h = gcn_nodes[head_entities + offsets]
         entity_t = gcn_nodes[tail_entities + offsets]
         entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
@@ -225,6 +226,46 @@ class Model(nn.Module):
         e_tw = batch_entity_att[batch_did, pair_entities]
         e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
         return e_tw
+
+
+    def bfs(self, adj, src, dist, num_entity_node):
+        q = deque()
+        is_visited = [-1] * len(adj)
+        q.append((src, 0))
+        is_visited[src] = 0
+
+        while len(q) != 0:
+            nid, depth = q.popleft()
+            if depth >= dist:
+                continue
+            for nei in adj[nid]:
+                if is_visited[nei] == -1:
+                    is_visited[nei] = depth + 1
+                    q.append((nei, depth + 1))
+
+        is_visited = torch.tensor(is_visited[:num_entity_node])
+        valid = torch.where(is_visited != -1)[0]
+        res = set([(src, nei.item()) for nei in valid if nei.item() != src])
+        return res
+
+    def get_high_level_links(self, edges, num_node, num_entity_node, dist):
+        device = self.cfg.device
+        adj = [[] for _ in range(num_node)]
+        for idx in range(edges.shape[-1]):
+            u = edges[0][idx].item()
+            v = edges[1][idx].item()
+            adj[u].append(v) # already undirected in edges.
+
+        res = set()
+        for node in torch.arange(num_entity_node):
+            src = node.item()
+            res = self.bfs(adj, src, dist, num_entity_node) | res 
+        res = torch.tensor(list(res)).to(device)
+        res = res.T
+        res = to_undirected(res) # possible already in undirected format.
+        return res
+
+        
     
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_token_seqs = batch_input['batch_token_seqs']
@@ -270,13 +311,26 @@ class Model(nn.Module):
         edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
         edges = torch.cat(edges, dim=-1)
 
+        #=========================
+        num_entity_node = torch.sum(num_entity_per_doc).item()
+        num_node = len(batch_node_embs)
+        high_level_edges = self.get_high_level_links(edges, num_node, num_entity_node, dist=self.cfg.distance)
+        # CONTINUE: apply into rgat.
+        print(high_level_edges)
+        print(num_entity_per_doc)
+        input()
+
+        #=========================
+
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges, edges_type)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
+        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
+        # TESTED same as previous.
         graph_features = self.compute_graph_features(gcn_nodes,head_entities, tail_entities, offsets)
         cnn_features = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
@@ -288,7 +342,6 @@ class Model(nn.Module):
                                                  num_entity_per_doc,
                                                  num_mention_per_entity,
                                                  num_rel_per_doc)
-
         rel_features = torch.cat([cnn_features, att_features, graph_features], dim=-1)
 
         sc_loss = 0
