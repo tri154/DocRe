@@ -1,0 +1,10 @@
+Run cdr with high level graph, try with GAT, GCN, and distance = 3, 5
+But model suffers from overfitting, even when increasing regulalization factor: base decomposition, numbers of layers.
+
+→ How to develop model so that it doesn’t become overfitting too much, but still fix drawbacks.
+
+Score is around 80 with no regularlization
+Score is around 84-85 with regularlization
+
+
+
