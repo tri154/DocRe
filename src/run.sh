@@ -2,7 +2,8 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 DATASET="$1"
 
-SAVE_PATH="best.pt"
+SAVE_PATH="checkpoint"
+LOAD_PATH=None
 LOG_PATH="log.txt"
 SEED=2004
 
@@ -40,6 +41,7 @@ SC_WEIGHT=0.13922932736312713
 python main.py \
   --dataset $DATASET \
   --save_path $SAVE_PATH \
+  # --load_path $LOAD_PATH \
   --log_path $LOG_PATH \
   --seed $SEED \
   --num_epoch $NUM_EPOCH \

@@ -8,6 +8,8 @@ from collections import defaultdict
 from transformers.optimization import get_linear_schedule_with_warmup
 from torch.optim import AdamW
 from tqdm import tqdm
+import pickle
+import os
 
 
 class Trainer:
@@ -20,12 +22,40 @@ class Trainer:
 
         self.opt, self.sched = self.prepare_optimizer_scheduler()
 
+        if self.cfg.load_path is not None:
+            self.load_checkpoint(self.cfg.load_path)
+
 
     # doc_data = {'doc_tokens': doc_tokens, # list of token id of the doc. single dimension single dimension.
     #             'doc_title': doc_title,
     #             'doc_start_mpos': doc_start_mpos, # a dict of set. entity_id -> set of start of mentions token.
     #             'doc_sent_pos': doc_sent_pos} # a dict, sent_id -> (start, end) in token.
 
+    def load_checkpoint(self, path):
+        checkpoint = torch.load(path) 
+        self.model.load_state_dict(checkpoint['model']).to(self.cfg.device)
+        self.opt.load_state_dict(checkpoint['optimizer'])
+        self.sched.load_state_dict(checkpoint['scheduler'])
+        self.cur_epoch = checkpoint['epoch']
+        self.best_f1_dev = checkpoint['best_f1_dev']
+
+        with open( os.path.abspath(os.path.join(self.cfg.load_path, '..', 'train_set.pkl')), 'rb') as f:
+            self.train_set = pickle.load(f)
+        print(f"Checkpoint loaded from {path}, resumed from epoch {self.cur_epoch}")
+        self.cfg.logging(f"Checkpoint loaded from {path}, resumed from epoch {self.cur_epoch}")
+
+        
+    def save_ckpt(self, path):
+        checkpoint = {
+            'model': self.model.state_dict(),
+            'optimizer': self.opt.state_dict(),
+            'scheduler': self.sched.state_dict(),
+            'epoch': self.cur_epoch,
+            'best_f1_dev': self.best_f1_dev
+        }
+        with open(os.path.join(path, 'train_set.pkl'), 'wb') as f:
+            pickle.dump(self.train_set, f)
+        torch.save(checkpoint, os.path.join(path, f"epoch_{self.cur_epoch}.pt"))
 
     def prepare_optimizer_scheduler(self):
         grouped_params = defaultdict(list)
@@ -190,7 +220,10 @@ class Trainer:
             
             if d_f1 >= self.best_f1_dev:
                 self.best_f1_dev = d_f1
-                torch.save(self.model.state_dict(), self.cfg.save_path)
+                torch.save(self.model.state_dict(), os.path.join(self.cfg.save_path, "best.pt"))
+            if idx_epoch == 14 or idx_epoch == 21:
+                self.save_ckpt(self.cfg.save_path)
+
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
