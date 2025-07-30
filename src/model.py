@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.utils import to_undirected
 from torch.nn.utils.rnn import pad_sequence
+from torch_geometric.utils import to_undirected
+from torch_geometric.nn.models import GCN
 from collections import deque
 
 from models.transformers import Transformer
@@ -31,7 +32,7 @@ class Model(nn.Module):
        
         if self.cfg.graph_type == 'rgcn':
             self.low_level_graph = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.low_graph_layers)
-            self.ht_extractor = nn.Linear(emb_size*10, emb_size*5)
+            self.ht_extractor = nn.Linear(emb_size*2, emb_size*1)
         elif self.cfg.graph_type == 'rgat':
             # will be error using rgat at that point.
             self.low_level_graph = RGAT(emb_size, emb_size, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.low_graph_layers)
@@ -39,17 +40,18 @@ class Model(nn.Module):
         else:
             raise Exception("Define graph model.")
 
-        self.high_level_graph = RGAT(emb_size * 2, emb_size, num_node_type=-1, num_layers=self.cfg.high_graph_layers, heads=4)
+        # self.high_level_graph = RGAT(emb_size * 2, emb_size, num_node_type=-1, num_layers=self.cfg.high_graph_layers, heads=4)
+        self.high_level_graph = GCN(emb_size * 2, emb_size, num_layers=self.cfg.high_graph_layers)
 
         self.cnn = CNN(emb_size, device=self.cfg.device)
 
         self.MIP_Linear = nn.Sequential(
-            nn.Linear(emb_size * 8, emb_size * 5),
+            nn.Linear(emb_size * 4, emb_size * 2),
             nn.Tanh(),
             nn.Dropout(0.1),
-            nn.Linear(emb_size * 5, emb_size * 2),
-            nn.Tanh(),
-            nn.Dropout(0.1)
+            # nn.Linear(emb_size * 5, emb_size * 2),
+            # nn.Tanh(),
+            # nn.Dropout(0.1)
         )
         self.bilinear = nn.Linear(emb_size * 2, self.cfg.num_rel)
 
@@ -158,7 +160,8 @@ class Model(nn.Module):
         device = self.cfg.device
         relation_map = list()
         max_entity_per_doc = max(num_entity_per_doc)
-        batch_entity_embs =  torch.split(gcn_nodes[-1][:torch.sum(num_entity_per_doc)], num_entity_per_doc.tolist())
+        # batch_entity_embs =  torch.split(gcn_nodes[-1][:torch.sum(num_entity_per_doc)], num_entity_per_doc.tolist())
+        batch_entity_embs =  torch.split(gcn_nodes[:torch.sum(num_entity_per_doc)], num_entity_per_doc.tolist())
         for did in range(self.cur_batch_size):
             doc_entity_embs = batch_entity_embs[did]
             e_s_map = torch.einsum('ij, jk -> jik', doc_entity_embs, doc_entity_embs.T).to(device)
@@ -326,7 +329,8 @@ class Model(nn.Module):
 
         gcn_nodes = self.low_level_graph(batch_node_embs, edges, nodes_type=nodes_type, edges_type=edges_type)
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
-        gcn_nodes = self.high_level_graph(gcn_nodes[:num_entity_node], high_level_edges)
+        gcn_nodes = self.high_level_graph(x=gcn_nodes[:num_entity_node], edge_index=high_level_edges)
+        print(gcn_nodes.shape)
         #=========================
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
@@ -334,7 +338,7 @@ class Model(nn.Module):
 
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
         # gcn_nodes = gcn_nodes[-1]
-        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
+        # gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
         # TESTED same as previous.
         graph_features = self.compute_graph_features(gcn_nodes,head_entities, tail_entities, offsets)
