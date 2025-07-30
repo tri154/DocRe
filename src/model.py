@@ -31,7 +31,7 @@ class Model(nn.Module):
        
         if self.cfg.graph_type == 'rgcn':
             self.low_level_graph = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.low_graph_layers)
-            self.ht_extractor = nn.Linear(emb_size*2, emb_size*2)
+            self.ht_extractor = nn.Linear(emb_size*10, emb_size*5)
         elif self.cfg.graph_type == 'rgat':
             # will be error using rgat at that point.
             self.low_level_graph = RGAT(emb_size, emb_size, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.low_graph_layers)
@@ -39,12 +39,16 @@ class Model(nn.Module):
         else:
             raise Exception("Define graph model.")
 
-        self.high_level_graph = RGAT(emb_size, emb_size, num_node_type=-1, num_layers=self.cfg.high_graph_layers)
+        self.high_level_graph = RGAT(emb_size * 2, emb_size, num_node_type=-1, num_layers=self.cfg.high_graph_layers, heads=4)
 
         self.cnn = CNN(emb_size, device=self.cfg.device)
 
         self.MIP_Linear = nn.Sequential(
+            nn.Linear(emb_size * 8, emb_size * 5),
+            nn.Tanh(),
+            nn.Dropout(0.1),
             nn.Linear(emb_size * 5, emb_size * 2),
+            nn.Tanh(),
             nn.Dropout(0.1)
         )
         self.bilinear = nn.Linear(emb_size * 2, self.cfg.num_rel)
@@ -319,17 +323,18 @@ class Model(nn.Module):
         num_node = len(batch_node_embs)
         high_level_edges = self.get_high_level_links(edges, num_node, num_entity_node, dist=self.cfg.distance)
 
-        #=========================
 
         gcn_nodes = self.low_level_graph(batch_node_embs, edges, nodes_type=nodes_type, edges_type=edges_type)
-        gcn_nodes = self.high_level_graph(gcn_nodes[-1][:num_entity_node], high_level_edges)
+        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
+        gcn_nodes = self.high_level_graph(gcn_nodes[:num_entity_node], high_level_edges)
+        #=========================
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
-        gcn_nodes = gcn_nodes[-1]
-        # gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
+        # gcn_nodes = gcn_nodes[-1]
+        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
         # TESTED same as previous.
         graph_features = self.compute_graph_features(gcn_nodes,head_entities, tail_entities, offsets)
@@ -350,7 +355,7 @@ class Model(nn.Module):
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(rel_features, batch_labels)
 
-        rel_features = torch.tanh(self.MIP_Linear(rel_features))
+        rel_features = self.MIP_Linear(rel_features)
         logits = self.bilinear(rel_features)
 
         if not is_training:
