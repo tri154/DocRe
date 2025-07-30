@@ -222,10 +222,10 @@ class Trainer:
             if d_f1 >= self.best_f1_dev:
                 self.best_f1_dev = d_f1
                 torch.save(self.model.state_dict(), os.path.join(self.cfg.save_path, "best.pt"))
+            self.cur_epoch += 1
             if idx_epoch == 14 or idx_epoch == 21:
                 self.save_ckpt(self.cfg.save_path)
 
-            self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
         self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
