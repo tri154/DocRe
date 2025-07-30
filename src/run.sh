@@ -1,5 +1,7 @@
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
-DATASET="cdr"
+
+DATASET="$1"
+
 SAVE_PATH="best.pt"
 LOG_PATH="log.txt"
 SEED=2004
@@ -16,10 +18,12 @@ PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
+# DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
 GRAPH_TYPE='rgcn'
+NUM_BASES=2
 TYPE_DIM=20
 GRAPH_LAYERS=3 #NOTE min=2
 
@@ -51,6 +55,7 @@ python main.py \
   --transformer $TRANSFORMER \
   --seq_process_type $SEQ_PROCESS_TYPE\
   --graph_type $GRAPH_TYPE\
+  --num_bases $NUM_BASES\
   --type_dim $TYPE_DIM \
   --graph_layers $GRAPH_LAYERS \
   --use_psd $USE_PSD \

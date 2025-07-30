@@ -18,7 +18,7 @@ class RGCN(nn.Module):
     out = model(x, node_type, edge_index, edge_type)
     """
 
-    def __init__(self, in_dim, hidden_dim, num_relations=4, num_node_type=3, type_dim=20, num_layers=1):
+    def __init__(self, in_dim, hidden_dim, num_relations=4, num_node_type=3, type_dim=20, num_layers=1, num_bases=0):
         super(RGCN, self).__init__()
         self.activation = nn.ReLU()
         self.num_layers = num_layers
@@ -26,13 +26,17 @@ class RGCN(nn.Module):
         self.num_relations = num_relations
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
+        if num_bases == 0:
+            self.num_bases = None
+        else:
+            self.num_bases = num_bases
 
         self.node_emb = torch.nn.Embedding(num_node_type, type_dim)
 
         self.convs = nn.ModuleList()
         for layer in range(num_layers):
             input_dim = in_dim + type_dim if layer == 0 else hidden_dim
-            self.convs.append(RGCNConv(input_dim, hidden_dim, num_relations))
+            self.convs.append(RGCNConv(input_dim, hidden_dim, num_relations, num_bases=self.num_bases))
            
 
     def forward(self, x, node_type, edge_index, edge_type):

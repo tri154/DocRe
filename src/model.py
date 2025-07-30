@@ -28,7 +28,7 @@ class Model(nn.Module):
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
        
         if self.cfg.graph_type == 'rgcn':
-            self.graph_model = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
+            self.graph_model = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers, num_bases=self.cfg.num_bases)
             self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
         elif self.cfg.graph_type == 'rgat':
             self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
@@ -188,6 +188,43 @@ class Model(nn.Module):
         
         return head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc # reuse
         
+    def compute_graph_features(self, gcn_nodes, head_entities, tail_entities, offsets):
+        entity_h = gcn_nodes[head_entities + offsets]
+        entity_t = gcn_nodes[tail_entities + offsets]
+        entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
+        return entity_ht
+        
+    def compute_cnn_features(self, relation_map, head_entities, tail_entities, num_rel_per_doc):
+        device = self.cfg.device
+        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).to(device)
+        relation = relation_map[batch_did, :, head_entities, tail_entities] # 14, 512
+        return relation
+
+    def compute_att_features(self, batch_token_embs,
+                             batch_token_atts,
+                             batch_start_mpos,
+                             head_entities,
+                             tail_entities,
+                             num_entity_per_doc,
+                             num_mention_per_entity,
+                             num_rel_per_doc):
+
+        device = self.cfg.device
+        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_entity_per_doc).unsqueeze(-1).to(device)
+        batch_entity_att = batch_token_atts[batch_did, :, batch_start_mpos] #NOTE: might take lot of memory.
+        batch_entity_att = torch.sum(batch_entity_att, dim=1) / (num_mention_per_entity.unsqueeze(-1).unsqueeze(-1) + 1e-5)
+        batch_entity_att = batch_entity_att.mean(dim=1) # 16, 370 ,TESTED
+
+        batch_entity_att = torch.split(batch_entity_att, num_entity_per_doc.tolist())
+        batch_entity_att = pad_sequence(batch_entity_att, batch_first=True, padding_value = 0.0) # 4, max_num_e, 512
+        batch_entity_att = torch.bmm(batch_entity_att, batch_token_embs[:, :-1])  # 4, max_e_num, 512
+
+        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).unsqueeze(-1).to(device)
+        pair_entities = torch.stack([head_entities, tail_entities], dim=-1)
+        e_tw = batch_entity_att[batch_did, pair_entities]
+        e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
+        return e_tw
+
     
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_token_seqs = batch_input['batch_token_seqs']
@@ -238,39 +275,22 @@ class Model(nn.Module):
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
-        #=============================
-        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
-        entity_h = gcn_nodes[head_entities + offsets]
-        entity_t = gcn_nodes[tail_entities + offsets]
-        entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
+        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
-
-        #=============================
-        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).to(device)
-        relation = relation_map[batch_did, :, head_entities, tail_entities] # 14, 512
-
-        
-        #=============================
+        graph_feat = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
+        cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
-
-        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_entity_per_doc).unsqueeze(-1).to(device)
-        batch_entity_att = batch_token_atts[batch_did, :, batch_start_mpos] #NOTE: might take lot of memory.
-        batch_entity_att = torch.sum(batch_entity_att, dim=1) / (num_mention_per_entity.unsqueeze(-1).unsqueeze(-1) + 1e-5)
-        batch_entity_att = batch_entity_att.mean(dim=1) # 16, 370 ,TESTED
-
-        batch_entity_att = torch.split(batch_entity_att, num_entity_per_doc.tolist())
-        batch_entity_att = pad_sequence(batch_entity_att, batch_first=True, padding_value = 0.0) # 4, max_num_e, 512
-        batch_entity_att = torch.bmm(batch_entity_att, batch_token_embs[:, :-1])  # 4, max_e_num, 512
-
-        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).unsqueeze(-1).to(device)
-        pair_entities = torch.stack([head_entities, tail_entities], dim=-1)
-        e_tw = batch_entity_att[batch_did, pair_entities]
-        e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
-
-        #=============================
+        att_feat = self.compute_att_features(batch_token_embs,
+                                             batch_token_atts,
+                                             batch_start_mpos,
+                                             head_entities,
+                                             tail_entities,
+                                             num_entity_per_doc,
+                                             num_mention_per_entity,
+                                             num_rel_per_doc)
         
-        relation_rep = torch.cat([relation, e_tw, entity_ht], dim=-1)
+        relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
