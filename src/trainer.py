@@ -18,7 +18,7 @@ class Trainer:
         self.model = model
         self.train_set = train_set
         self.tester = tester
-        self.cur_epoch = 0
+        self.cur_epoch = -1
 
         self.opt, self.sched = self.prepare_optimizer_scheduler()
 
@@ -208,7 +208,7 @@ class Trainer:
             self.train_set = train_set
 
         self.best_f1_dev = 0
-        for idx_epoch in range(num_epoches):
+        for idx_epoch in range(self.cur_epoch + 1, num_epoches):
 
             print(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
             self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
