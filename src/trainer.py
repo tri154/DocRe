@@ -46,6 +46,7 @@ class Trainer:
 
         
     def save_ckpt(self, path):
+        os.makedirs(path, exist_ok=True)
         checkpoint = {
             'model': self.model.state_dict(),
             'optimizer': self.opt.state_dict(),
