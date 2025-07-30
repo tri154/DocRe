@@ -23,7 +23,7 @@ DEVICE="cuda:0"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
-GRAPH_TYPE='rgat'
+GRAPH_TYPE="rgat"
 NUM_BASES=2
 TYPE_DIM=20
 GRAPH_LAYERS=5 #NOTE min=2
