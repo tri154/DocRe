@@ -34,6 +34,7 @@ class Trainer:
     def load_checkpoint(self, path):
         checkpoint = torch.load(path) 
         self.model.load_state_dict(checkpoint['model']).to(self.cfg.device)
+        self.model.to(self.cfg.device)
         self.opt.load_state_dict(checkpoint['optimizer'])
         self.sched.load_state_dict(checkpoint['scheduler'])
         self.cur_epoch = checkpoint['epoch']
