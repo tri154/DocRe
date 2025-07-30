@@ -26,6 +26,7 @@ GRAPH_TYPE='rgcn'
 NUM_BASES=2
 TYPE_DIM=20
 GRAPH_LAYERS=3 #NOTE min=2
+DISTANCE=5 #NOTE min=3
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -58,6 +59,7 @@ python main.py \
   --num_bases $NUM_BASES\
   --type_dim $TYPE_DIM \
   --graph_layers $GRAPH_LAYERS \
+  --distance $DISTANCE\
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \

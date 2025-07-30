@@ -1,15 +1,16 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from loss import Loss
-from torch_geometric.utils import to_undirected
 from torch.nn.utils.rnn import pad_sequence
+from torch_geometric.utils import to_undirected
+from torch_geometric.nn.models import GCN
+from collections import deque
+
 from models.transformers import Transformer
 from models.rgcn import RGCN
 from models.rgat import RGAT
 from models.cnn import CNN
-
-
+from loss import Loss
 
 class Model(nn.Module):
 
@@ -28,7 +29,7 @@ class Model(nn.Module):
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
        
         if self.cfg.graph_type == 'rgcn':
-            self.graph_model = RGCN(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers, num_bases=self.cfg.num_bases)
+            self.graph_model = RGCN(emb_size, emb_size, num_relations=5, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers, num_bases=self.cfg.num_bases)
             self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
         elif self.cfg.graph_type == 'rgat':
             self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
@@ -143,6 +144,43 @@ class Model(nn.Module):
         temp = temp[:-1].repeat_interleave(num_mentlink_per_doc).unsqueeze(0).to(device)
         ment_ment_links = batch_mentions_link + temp
         return to_undirected(ment_ment_links)
+
+    def bfs(self, adj, src, dist, num_entity_node):
+        q = deque()
+        is_visited = [-1] * len(adj)
+        q.append((src, 0))
+        is_visited[src] = 0
+
+        while len(q) != 0:
+            nid, depth = q.popleft()
+            if depth >= dist:
+                continue
+            for nei in adj[nid]:
+                if is_visited[nei] == -1:
+                    is_visited[nei] = depth + 1
+                    q.append((nei, depth + 1))
+
+        is_visited = torch.tensor(is_visited[:num_entity_node])
+        valid = torch.where(is_visited != -1)[0]
+        res = set([(src, nei.item()) for nei in valid if nei.item() != src])
+        return res
+
+    def get_ent_ent_link(self, edges, num_node, num_entity_node, dist):
+        device = self.cfg.device
+        adj = [[] for _ in range(num_node)]
+        for idx in range(edges.shape[-1]):
+            u = edges[0][idx].item()
+            v = edges[1][idx].item()
+            adj[u].append(v) # already undirected in edges.
+
+        res = set()
+        for node in torch.arange(num_entity_node):
+            src = node.item()
+            res = self.bfs(adj, src, dist, num_entity_node) | res 
+        res = torch.tensor(list(res)).to(device)
+        res = res.T
+        res = to_undirected(res) # possible already in undirected format.
+        return res
 
 
     def get_relation_map(self, gcn_nodes, num_entity_per_doc):
@@ -269,6 +307,14 @@ class Model(nn.Module):
         edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links]
         edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
         edges = torch.cat(edges, dim=-1)
+
+        # ======================
+        num_entity_node = torch.sum(num_entity_per_doc).item()
+        num_node = len(batch_node_embs)
+        ent_ent_links = self.get_ent_ent_link(edges, num_node, num_entity_node, self.cfg.distance)
+        edges_type = torch.cat([edges_type, (torch.max(edges_type) + 1).repeat(ent_ent_links.shape[-1])]).to(device)
+        edges = torch.cat([edges, ent_ent_links], dim=-1)
+        # ======================
 
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges, edges_type)
 

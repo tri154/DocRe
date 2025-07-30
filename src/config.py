@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument('--num_bases', type=int, default=0, help='rgcn regularization factors')
     parser.add_argument('--type_dim', type=int, default=20)
     parser.add_argument('--graph_layers', type=int, default=2, help='min = 2')
+    parser.add_argument('--distance', type=int, default=3, help='min = 3')
 
     parser.add_argument('--use_psd', type=str2bool, default=True)
     parser.add_argument('--lower_temp', type=float, default=2.0)
