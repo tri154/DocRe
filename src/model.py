@@ -330,7 +330,6 @@ class Model(nn.Module):
         gcn_nodes = self.low_level_graph(batch_node_embs, edges, nodes_type=nodes_type, edges_type=edges_type)
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
         gcn_nodes = self.high_level_graph(x=gcn_nodes[:num_entity_node], edge_index=high_level_edges)
-        print(gcn_nodes.shape)
         #=========================
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
