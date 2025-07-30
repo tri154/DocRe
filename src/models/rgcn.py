@@ -32,7 +32,7 @@ class RGCN(nn.Module):
         self.convs = nn.ModuleList()
         for layer in range(num_layers):
             input_dim = in_dim + type_dim if layer == 0 else hidden_dim
-            self.convs.append(RGCNConv(input_dim, hidden_dim, num_relations))
+            self.convs.append(RGCNConv(input_dim, hidden_dim, num_relations, num_bases=2))
            
 
     def forward(self, x, edge_index, nodes_type, edges_type, **kwargs):
