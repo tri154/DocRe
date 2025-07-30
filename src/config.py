@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str)
 
     parser.add_argument('--save_path', type=str, help="file path to save model.", default='checkpoint')
-    parser.add_argument('--load_path', type=str, default=None)
+    parser.add_argument('--load_path', type=str, default="")
     parser.add_argument('--log_path', type=str, default='log.txt')
     parser.add_argument('--seed', type=int, default=2004)
     parser.add_argument('--tqdm', action='store_true')

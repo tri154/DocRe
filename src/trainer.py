@@ -22,7 +22,7 @@ class Trainer:
 
         self.opt, self.sched = self.prepare_optimizer_scheduler()
 
-        if self.cfg.load_path is not None:
+        if self.cfg.load_path != "":
             self.load_checkpoint(self.cfg.load_path)
 
 
