@@ -133,6 +133,8 @@ class Config:
             raise Exception("Define topk, data_ner2word, f1_type")
             #set topk < 0 for multi classes.
 
+        self.log_config()
+
             
     def set_seed(self):
         self.logging("=" * 50 + "\n\n\n")
@@ -151,3 +153,11 @@ class Config:
     def logging(self, text):
         with open(self.log_path, 'a') as file:
             print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
+
+    def log_config(self):
+        self.logging("Configuration Settings:")
+        for key, value in sorted(self.__dict__.items()):
+            # Avoid logging functions or modules
+            if not key.startswith("__") and not callable(value):
+                self.logging(f"{key}: {value}")
+        self.logging("=" * 50)
