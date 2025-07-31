@@ -4,11 +4,12 @@ from main import run_training
 from config import Config
 
 def parse_args_from_trial(trial):
-    #NEED UPDATE
-    suggested_sc_temp = trial.suggest_float('sc_temp', 0.03, 1.0, log=True)
-    suggested_sc_weight = trial.suggest_float('sc_weight', 0.1, 5, log=True)
+    suggested_sc_temp = trial.suggest_float('sc_temp', 0.01, 1.0, log=True)
+    suggested_sc_weight = trial.suggest_float('sc_weight', 0.01, 1.0, log=True)
+    suggested_trade_off = trial.suggest_float('trade_off', 0.1, 5.0, log=True)
 
     args = argparse.Namespace()
+    args.deter_algo = True
 
     args.dataset = "cdr"
     args.save_path = "best.pt"
@@ -24,21 +25,23 @@ def parse_args_from_trial(trial):
 
     # Suggest hyperparameters with optuna
     args.new_lr = 1e-4
-    args.pretrained_lr = 1.472039003976042e-05
+    args.pretrained_lr = 2e-5
     args.adam_epsilon = 1e-6
 
     args.device = "cuda:0"
+    # args.device = "cpu"
     args.transformer = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
     args.seq_process_type = "sd"
 
     args.graph_type = 'rgcn'
+    args.num_bases = 2
     args.type_dim = 20
     args.graph_layers = 3
 
     args.use_psd = True
     args.lower_temp = 2.0
     args.upper_temp = 20.0
-    args.loss_tradeoff = 4.999979907145212
+    args.loss_tradeoff = suggested_trade_off
 
     args.use_sc = True
     args.sc_temp = suggested_sc_temp
