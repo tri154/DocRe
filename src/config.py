@@ -19,6 +19,7 @@ def str2bool(v):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--deter_algo', type=str2bool, default=True)
 
     parser.add_argument('--dataset', type=str)
 
@@ -148,7 +149,8 @@ class Config:
         torch.backends.cudnn.enabled = False
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
-        torch.use_deterministic_algorithms(True, warn_only=True)
+        if self.deter_algo:
+            torch.use_deterministic_algorithms(True, warn_only=True)
 
     def logging(self, text):
         with open(self.log_path, 'a') as file:

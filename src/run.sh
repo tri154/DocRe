@@ -1,4 +1,9 @@
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
+DETER_ALGO=True
+
+if [[ "${DETER_ALGO,,}" == "true" ]]; then
+    export CUBLAS_WORKSPACE_CONFIG=:4096:8
+fi
+
 
 DATASET="$1"
 
@@ -38,6 +43,7 @@ SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
 python main.py \
+  --deter_algo $DETER_ALGO \
   --dataset $DATASET \
   --save_path $SAVE_PATH \
   --log_path $LOG_PATH \
