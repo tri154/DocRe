@@ -52,15 +52,18 @@ class Preprocessing:
     def __prepare_doc(self, doc):
         start_mpos, end_mpos = set(), set()
         sid_pos2eid = defaultdict(set)
+        doc_eid2sid = defaultdict(set)
         is_error = False
         for eid, entity in enumerate(doc['vertexSet']):
             for mid, mention in enumerate(entity):
+                doc_eid2sid[eid].add(mention['sent_id'])
                 start_mpos.add((mention['sent_id'], mention['pos'][0]))
                 sid_pos2eid[(mention['sent_id'], mention['pos'][0])].add(eid)
                 if len(sid_pos2eid[(mention['sent_id'], mention['pos'][0])]) == 2:
                     is_error = True
                 end_mpos.add((mention['sent_id'], mention['pos'][1] - 1))
 
+        #doc tokens===============================
         doc_tokens = []
         doc_start_mpos = defaultdict(set)
         doc_mpos2sid = dict()
@@ -85,19 +88,22 @@ class Preprocessing:
         doc_tokens = torch.Tensor(doc_tokens).int()
         doc_title = doc['title']
 
+        #relation=================================
         doc_epair_rels = defaultdict(list)
         for rel in doc['labels']:
             h, t, r = rel['h'], rel['t'], rel['r']
             doc_epair_rels[(h, t)].append(r)
 
-        temp = list()
 
+        #mention_to_sentence_id===================
+        temp = list()
         for eid in sorted(doc_start_mpos.keys()):
             for mpos in sorted(doc_start_mpos[eid]):
                 temp.append((mpos, doc_mpos2sid[mpos]))
-
         doc_mpos2sid = torch.tensor(temp)
 
+
+        #mention_in_the_same_sentence_link========
         value_to_indices = defaultdict(list)
         for idx, value in enumerate(doc_mpos2sid[:, 1]):
             value_to_indices[int(value)].append(idx)
@@ -118,13 +124,40 @@ class Preprocessing:
         else:
             doc_mentions_link = torch.empty((2, 0), dtype=torch.long)
 
+        #entity_in_the_same_sentence_link=========
+        value_to_indices = defaultdict(list)
+        for eid, sents in doc_eid2sid.items():
+            for sid in sents:
+                value_to_indices[sid].append(eid)
+
+        first_ents = list()
+        second_ents = list()
+        for indices in value_to_indices.values():
+            if len(indices) >= 2:
+                indices_tensor = torch.tensor(indices)
+                row, col = torch.triu_indices(len(indices_tensor), len(indices_tensor), offset=1)
+                first_ents.append(indices_tensor[row])
+                second_ents.append(indices_tensor[col])
+        if len(first_ents) != 0:
+            first_ents = torch.cat(first_ents)
+            second_ents = torch.cat(second_ents)
+            doc_ents_link = torch.stack([first_ents, second_ents])
+            doc_ents_link = doc_ents_link.T.tolist()
+            doc_ents_link = set([(i[0], i[1]) for i in doc_ents_link])
+            doc_ents_link = torch.tensor(list(doc_ents_link)).T
+        else:
+            doc_ents_link = torch.empty((2, 0), dtype=torch.long)
+
+        #return===================================
         doc_data = {'doc_tokens': doc_tokens,
                     'doc_title': doc_title,
                     'doc_start_mpos': doc_start_mpos,
                     'doc_sent_pos': doc_sent_pos,
                     'doc_epair_rels': doc_epair_rels,
                     'doc_mpos2sid': doc_mpos2sid,
-                    'doc_mentions_link': doc_mentions_link}
+                    'doc_mentions_link': doc_mentions_link,
+                    'doc_ents_link': doc_ents_link,
+                    'doc_eid2sid': doc_eid2sid}
 
 
         return doc_data, is_error

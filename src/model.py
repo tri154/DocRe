@@ -3,11 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch_geometric.utils import to_undirected
-from torch_geometric.nn.models import GCN
 from collections import deque
 
 from models.transformers import Transformer
 from models.rgcn import RGCN
+from models.custom_rgcn import CustomRGCN
 from models.rgat import RGAT
 from models.cnn import CNN
 from loss import Loss
@@ -29,7 +29,14 @@ class Model(nn.Module):
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
        
         if self.cfg.graph_type == 'rgcn':
-            self.graph_model = RGCN(emb_size, emb_size, num_relations=5, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers, num_bases=self.cfg.num_bases)
+            self.graph_model = CustomRGCN(emb_size,
+                                          emb_size,
+                                          num_relations=6,
+                                          num_node_type=3,
+                                          type_dim=self.cfg.type_dim,
+                                          low_layers=self.cfg.low_layers,
+                                          high_layers=self.cfg.high_layers,
+                                          num_bases=self.cfg.num_bases)
             self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
         elif self.cfg.graph_type == 'rgat':
             self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
@@ -165,7 +172,7 @@ class Model(nn.Module):
         res = set([(src, nei.item()) for nei in valid if nei.item() != src])
         return res
 
-    def get_ent_ent_link(self, edges, num_node, num_entity_node, dist):
+    def get_ent_ent_link_bfs(self, edges, num_node, num_entity_node, dist):
         device = self.cfg.device
         adj = [[] for _ in range(num_node)]
         for idx in range(edges.shape[-1]):
@@ -182,6 +189,35 @@ class Model(nn.Module):
         res = to_undirected(res) # possible already in undirected format.
         return res
 
+    def get_ent_ent_links(self, batch_ents_link, num_entlink_per_doc, num_entity_per_doc):
+        device = self.cfg.device
+        temp = torch.cat([torch.tensor([0]), num_entity_per_doc]).cumsum(dim=-1)[:-1]
+        temp = torch.repeat_interleave(temp, num_entlink_per_doc).unsqueeze(0).to(device)
+        res = batch_ents_link + temp
+        return to_undirected(res)
+
+
+    def get_ent_sent_links(self, batch_eid2sid, num_entity_per_doc, num_sent_per_doc, num_per_type):
+        device = self.cfg.device
+        sent_cumsum = torch.cat([torch.tensor([0]), num_sent_per_doc], dim=-1).cumsum(dim=-1)[:-1] + num_per_type[0] + num_per_type[1]
+        ent_cumsum = torch.cat([torch.tensor([0]), num_entity_per_doc], dim=-1).cumsum(dim=-1)[:-1]
+
+        start = list()
+        end = list()
+        for did in range(self.cur_batch_size):
+            doc_eid2sid = batch_eid2sid[did]
+            for eid in sorted(doc_eid2sid.keys()):
+                sents = torch.tensor(list(doc_eid2sid[eid])) + sent_cumsum[did]
+                ents = torch.tensor([eid]).repeat(len(sents)) + ent_cumsum[did]
+
+                start.append(sents)
+                end.append(ents)
+
+        start = torch.cat(start, dim=-1).to(device)
+        end = torch.cat(end, dim=-1).to(device)
+        res = torch.stack([start, end]).to(device)
+        return res
+        
 
     def get_relation_map(self, gcn_nodes, num_entity_per_doc):
         device = self.cfg.device
@@ -272,13 +308,17 @@ class Model(nn.Module):
         batch_epair_rels = batch_input['batch_epair_rels']
         batch_sent_pos = batch_input['batch_sent_pos']
         batch_mpos2sid = batch_input['batch_mpos2sid']
+        batch_eid2sid = batch_input['batch_eid2sid']
         batch_mentions_link = batch_input['batch_mentions_link']
+        batch_ents_link = batch_input['batch_ents_link']
         batch_teacher_logits = batch_input['batch_teacher_logits']
         num_mentlink_per_doc = batch_input['num_mentlink_per_doc']
+        num_entlink_per_doc = batch_input['num_entlink_per_doc']
         num_entity_per_doc = batch_input['num_entity_per_doc']
         num_mention_per_doc = batch_input['num_mention_per_doc']
         num_mention_per_entity = batch_input['num_mention_per_entity']
         num_sent_per_doc = batch_input['num_sent_per_doc']
+        
         device = self.cfg.device
         self.cur_batch_size = len(batch_token_seqs)
 
@@ -303,20 +343,24 @@ class Model(nn.Module):
         sent_sent_links = self.get_sentence_sentence_link(num_sent_per_doc, num_per_type)
         ment_sent_links = self.get_ment_sent_link(batch_mpos2sid, num_sent_per_doc, num_mention_per_doc, num_per_type)
         ment_ment_links = self.get_ment_ment_link(batch_mentions_link, num_mentlink_per_doc, num_mention_per_doc, num_per_type)
+        ent_ent_links = self.get_ent_ent_links(batch_ents_link, num_entlink_per_doc, num_entity_per_doc)
+        ent_sent_links = self.get_ent_sent_links(batch_eid2sid, num_entity_per_doc, num_sent_per_doc, num_per_type)
 
-        edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links]
-        edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
-        edges = torch.cat(edges, dim=-1)
+        #======================
 
-        # ======================
-        num_entity_node = torch.sum(num_entity_per_doc).item()
-        num_node = len(batch_node_embs)
-        ent_ent_links = self.get_ent_ent_link(edges, num_node, num_entity_node, self.cfg.distance)
-        edges_type = torch.cat([edges_type, (torch.max(edges_type) + 1).repeat(ent_ent_links.shape[-1])]).to(device)
-        edges = torch.cat([edges, ent_ent_links], dim=-1)
-        # ======================
+        edges = [ent_ment_links,
+                sent_sent_links,
+                ment_sent_links,
+                ment_ment_links,
+                ent_ent_links,
+                ent_sent_links]
 
-        gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges, edges_type)
+        #======================
+        # edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links, ent_ent_links, ent_sent_links]
+        # edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
+        # edges = torch.cat(edges, dim=-1)
+
+        gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max

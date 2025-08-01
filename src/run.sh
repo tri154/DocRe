@@ -25,8 +25,10 @@ SEQ_PROCESS_TYPE="sd"
 GRAPH_TYPE='rgcn'
 NUM_BASES=2
 TYPE_DIM=20
-GRAPH_LAYERS=3 #NOTE min=2
-DISTANCE=5 #NOTE min=3
+LOW_LAYERS=1
+HIGH_LAYERS=2
+# GRAPH_LAYERS=3 #NOTE min=2
+# DISTANCE=3 #NOTE min=3
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -58,8 +60,8 @@ python main.py \
   --graph_type $GRAPH_TYPE\
   --num_bases $NUM_BASES\
   --type_dim $TYPE_DIM \
-  --graph_layers $GRAPH_LAYERS \
-  --distance $DISTANCE\
+  --low_layers $LOW_LAYERS \
+  --high_layers $HIGH_LAYERS \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \
