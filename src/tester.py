@@ -37,7 +37,9 @@ class Tester:
             batch_sent_pos = list()
             num_sent_per_doc = list()
             batch_mpos2sid = list()
+            batch_eid2sid = list()
             batch_mentions_link = list()
+            batch_ents_link = list()
             batch_teacher_logits = list()
   
             for doc_input in batch_inputs:
@@ -46,6 +48,8 @@ class Tester:
                 batch_start_mpos.append(doc_input['doc_start_mpos'])
                 batch_sent_pos.append(doc_input['doc_sent_pos'])
                 batch_mpos2sid.append(doc_input['doc_mpos2sid'])
+                batch_eid2sid.append(doc_input['doc_eid2sid'])
+                batch_ents_link.append(doc_input['doc_ents_link'])
                 batch_mentions_link.append(doc_input['doc_mentions_link'])
                 num_sent_per_doc.append(len(doc_input['doc_sent_pos']))
 
@@ -95,15 +99,19 @@ class Tester:
 
             num_mentlink_per_doc = torch.tensor([ts.shape[-1] for ts in batch_mentions_link])
             batch_mentions_link = torch.cat(batch_mentions_link, dim=-1)
+            num_entlink_per_doc = torch.tensor([ts.shape[-1] for ts in batch_ents_link])
+            batch_ents_link = torch.cat(batch_ents_link, dim=-1)
 
             yield { 'indices': indicies,
                     'batch_titles': np.array(batch_titles),
                     'batch_epair_rels': batch_epair_rels,
                     'batch_sent_pos': batch_sent_pos,
+                    'batch_eid2sid': batch_eid2sid,
                     'num_sent_per_doc': num_sent_per_doc.cpu(), 
                     'num_entity_per_doc': num_entity_per_doc.cpu(),
                     'num_mention_per_doc': num_mention_per_doc.cpu(),
                     'num_mentlink_per_doc': num_mentlink_per_doc.cpu(),
+                    'num_entlink_per_doc': num_entlink_per_doc.cpu(),
                     'num_mention_per_entity': num_mention_per_entity.to(device),
                     'batch_token_seqs': batch_token_seqs.to(device),
                     'batch_token_masks': batch_token_masks.to(device),
@@ -111,9 +119,9 @@ class Tester:
                     'batch_start_mpos': batch_start_mpos.to(device),
                     'batch_mpos2sid': batch_mpos2sid.to(device),
                     'batch_mentions_link': batch_mentions_link.to(device),
+                    'batch_ents_link': batch_ents_link.to(device),
                     'batch_teacher_logits': batch_teacher_logits.to(device) if batch_teacher_logits is not None else None,
                     }
-
 
     def cal_f1_binary(self, preds, labels, epsilon=1e-8):
         preds = preds.to(dtype=torch.int)
