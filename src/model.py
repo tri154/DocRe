@@ -319,7 +319,6 @@ class Model(nn.Module):
         num_mention_per_entity = batch_input['num_mention_per_entity']
         num_sent_per_doc = batch_input['num_sent_per_doc']
         
-        device = self.cfg.device
         self.cur_batch_size = len(batch_token_seqs)
 
         batch_token_embs, batch_token_atts = self.transformer(batch_token_seqs, batch_token_masks, batch_token_types)
@@ -347,20 +346,18 @@ class Model(nn.Module):
         ent_sent_links = self.get_ent_sent_links(batch_eid2sid, num_entity_per_doc, num_sent_per_doc, num_per_type)
 
         #======================
-
         edges = [ent_ment_links,
                 sent_sent_links,
                 ment_sent_links,
                 ment_ment_links,
                 ent_ent_links,
                 ent_sent_links]
-
+        gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
         #======================
         # edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links, ent_ent_links, ent_sent_links]
         # edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
         # edges = torch.cat(edges, dim=-1)
 
-        gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max

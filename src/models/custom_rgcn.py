@@ -60,8 +60,8 @@ class CustomRGCN(nn.Module):
 
         #high layers
         x = output[-1]
-        temp = [edges[1], edges[4], edges[5]]
-        edge_type = torch.tensor([1, 4, 5], device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in temp], device=device))
+        temp = [edges[1], edges[5]]
+        edge_type = torch.tensor([1, 5], device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in temp], device=device))
         edge_index = torch.cat(temp, dim=-1).to(device)
         for idx in range(self.low_layers, self.low_layers + self.high_layers):
             conv = self.convs[idx]
