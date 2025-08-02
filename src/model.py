@@ -28,6 +28,8 @@ class Model(nn.Module):
         self.num_node_types = 3
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
        
+        self.extractor_cr = nn.Linear(self.emb_size, int(self.emb_size / 2))
+
         if self.cfg.graph_type == 'rgcn':
             self.graph_model = CustomRGCN(emb_size,
                                           emb_size,
@@ -113,12 +115,13 @@ class Model(nn.Module):
         return batch_node_embs, nodes_type, num_per_type
 
 
-    def get_entity_mention_link(self, num_mention_per_entity, num_per_type):
+    def get_entity_mention_link(self, num_mention_per_entity, num_per_type, num_entity_per_doc, num_mention_per_doc):
         device = self.cfg.device
         entity = torch.arange(len(num_mention_per_entity), device=device).repeat_interleave(num_mention_per_entity)
         mention = torch.arange(num_per_type[0], num_per_type[0] + num_per_type[1], device=device)
         entity_mention_links = torch.stack([entity, mention]).to(device)
-        return to_undirected(entity_mention_links)
+        entity_labels = entity.split(num_mention_per_doc.tolist())
+        return to_undirected(entity_mention_links), entity_labels
 
     def get_sentence_sentence_link(self, num_sent_per_doc, num_per_type):
         device = self.cfg.device
@@ -338,14 +341,20 @@ class Model(nn.Module):
         # doc1_e1_mention_1, doc1_e1_mention2, ...
         # doc1_sent1, doc1_sent2, ...
 
-        ent_ment_links = self.get_entity_mention_link(num_mention_per_entity, num_per_type) # TODO: move links to preprocessing for performance.
+        ent_ment_links, entity_labels = self.get_entity_mention_link(num_mention_per_entity, num_per_type, num_entity_per_doc, num_mention_per_doc) # TODO: move links to preprocessing for performance.
         sent_sent_links = self.get_sentence_sentence_link(num_sent_per_doc, num_per_type)
         ment_sent_links = self.get_ment_sent_link(batch_mpos2sid, num_sent_per_doc, num_mention_per_doc, num_per_type)
         ment_ment_links = self.get_ment_ment_link(batch_mentions_link, num_mentlink_per_doc, num_mention_per_doc, num_per_type)
         ent_ent_links = self.get_ent_ent_links(batch_ents_link, num_entlink_per_doc, num_entity_per_doc)
         ent_sent_links = self.get_ent_sent_links(batch_eid2sid, num_entity_per_doc, num_sent_per_doc, num_per_type)
 
-        #======================
+        entity_embs = batch_node_embs[num_per_type[0]: num_per_type[0] + num_per_type[1]].split(num_mention_per_doc.tolist())
+        sc_loss = 0
+        if is_training and self.cfg.use_sc:
+            for emb, label in zip(entity_embs, entity_labels):
+                emb = self.extractor_cr(emb)
+                sc_loss += self.loss.SC_loss(emb, label, onehot=False)
+
         edges = [ent_ment_links,
                 sent_sent_links,
                 ment_sent_links,
@@ -353,11 +362,6 @@ class Model(nn.Module):
                 ent_ent_links,
                 ent_sent_links]
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
-        #======================
-        # edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links, ent_ent_links, ent_sent_links]
-        # edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
-        # edges = torch.cat(edges, dim=-1)
-
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
@@ -379,9 +383,9 @@ class Model(nn.Module):
         
         relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
 
-        sc_loss = 0
-        if is_training and self.cfg.use_sc:
-            sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
+        # sc_loss = 0
+        # if is_training and self.cfg.use_sc:
+        #     sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         relation_rep = torch.tanh(self.MIP_Linear(relation_rep))
         logits = self.bilinear(relation_rep)
