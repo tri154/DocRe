@@ -48,24 +48,24 @@ class CustomRGCN(nn.Module):
         """
         device = embs.device
         output = list()
-        embs = torch.cat([embs, self.node_emb(node_type)], dim=-1).to(device)
+        x = torch.cat([embs, self.node_emb(node_type)], dim=-1).to(device)
 
         #low layers
         edge_index = torch.cat(edges[:-1], dim=-1)
         edge_type = torch.arange(len(edges[:-1]), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges[:-1]], device=device))
         for idx in range(self.low_layers):
             conv = self.convs[idx]
-            x = self.activation(conv(embs, edge_index, edge_type))
+            x = self.activation(conv(x, edge_index, edge_type))
             output.append(x)
 
         #high layers
-        embs = output[-1]
+        x = output[-1]
         temp = [edges[1], edges[4], edges[5]]
         edge_type = torch.tensor([1, 4, 5], device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in temp], device=device))
         edge_index = torch.cat(temp, dim=-1).to(device)
         for idx in range(self.low_layers, self.low_layers + self.high_layers):
             conv = self.convs[idx]
-            x = self.activation(conv(embs, edge_index, edge_type))
+            x = self.activation(conv(x, edge_index, edge_type))
             output.append(x)
 
         return [output[0], output[-1]]
