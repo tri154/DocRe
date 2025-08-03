@@ -48,9 +48,21 @@ class Model(nn.Module):
 
         self.MIP_Linear = nn.Sequential(
             nn.Linear(emb_size * 5, emb_size * 2),
-            nn.Dropout(0.1)
+            nn.LayerNorm(emb_size * 2),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+
+            nn.Linear(emb_size * 2, emb_size),
+            nn.LayerNorm(emb_size),
+            torch.nn.Tanh(),
+
+            nn.Linear(emb_size, emb_size // 2),
+            nn.LayerNorm(emb_size // 2),
+            torch.nn.Tanh(),
         )
-        self.bilinear = nn.Linear(emb_size * 2, self.cfg.num_rel)
+        self.bilinear = nn.Sequential(
+            nn.Linear(emb_size // 2, self.cfg.num_rel),
+        )
 
         self.loss = Loss(cfg)
 
@@ -383,7 +395,7 @@ class Model(nn.Module):
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
-        relation_rep = torch.tanh(self.MIP_Linear(relation_rep))
+        relation_rep = self.MIP_Linear(relation_rep)
         logits = self.bilinear(relation_rep)
 
         if not is_training:
