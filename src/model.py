@@ -55,10 +55,12 @@ class Model(nn.Module):
             nn.Linear(emb_size * 2, emb_size),
             nn.LayerNorm(emb_size),
             torch.nn.Tanh(),
+            nn.Dropout(0.1),
 
             nn.Linear(emb_size, emb_size // 2),
             nn.LayerNorm(emb_size // 2),
             torch.nn.Tanh(),
+            nn.Dropout(0.1),
         )
         self.bilinear = nn.Sequential(
             nn.Linear(emb_size // 2, self.cfg.num_rel),
