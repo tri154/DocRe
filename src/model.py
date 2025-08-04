@@ -50,12 +50,12 @@ class Model(nn.Module):
             nn.Linear(emb_size * 5, emb_size * 2),
             nn.LayerNorm(emb_size * 2),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
 
             nn.Linear(emb_size * 2, emb_size),
             nn.LayerNorm(emb_size),
             torch.nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
 
             nn.Linear(emb_size, emb_size // 2),
             nn.LayerNorm(emb_size // 2),
