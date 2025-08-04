@@ -47,7 +47,8 @@ class Loss:
 
     def CE_pred(self, logits):
         pred = torch.argmax(logits, dim=-1)
-        return pred
+        one_hot_pred = F.one_hot(pred, num_classes=2).float()
+        return one_hot_pred
         
 
     def AT_focal_loss(self, logits, labels):
