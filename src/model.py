@@ -401,7 +401,7 @@ class Model(nn.Module):
         if not is_training:
             return self.loss.AT_pred(logits), batch_labels
             
-        at_loss = self.loss.AT_loss_original(logits, batch_labels)
+        at_loss = self.loss.AT_focal_loss(logits, batch_labels)
 
         kd_loss = torch.tensor(0.0)
         current_tradeoff = 0.0
