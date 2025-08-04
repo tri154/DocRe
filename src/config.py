@@ -105,11 +105,11 @@ class Config:
 
 
         self.data_ner2id = json.load(open(os.path.join(self.dir_dataset_ori, 'ner2id.json'), 'r'))
-        self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id.json'), 'r'))
+        self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
         self.data_id2ner = {v: k for k, v in self.data_ner2id.items()}
         self.data_id2rel = {v: k for k, v in self.data_rel2id.items()}
 
-        self.id_rel_thre = self.data_rel2id['Na']
+        # self.id_rel_thre = self.data_rel2id['Na']
         self.num_ner = len(self.data_ner2id)
         self.num_rel = len(self.data_rel2id)
 

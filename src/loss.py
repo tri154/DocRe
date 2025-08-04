@@ -27,6 +27,28 @@ class Loss:
         loss = loss.mean()
         return loss
 
+    def CE_focal_loss(self, logits, labels):
+        device = self.cfg.device
+        log_probs = F.log_softmax(logits, dim=-1)
+
+        loss = - torch.pow(1.0 - log_probs.exp(), self.cfg.focal_gamma) * log_probs * labels
+
+        counts = labels.sum(dim=0)
+        alpha = torch.zeros_like(counts).to(device)
+        nonzero_mask = counts != 0
+        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        alpha = alpha / alpha.sum()
+        alpha = alpha.unsqueeze(0)
+        
+        loss = alpha * loss
+        loss = loss.sum(-1).mean()
+
+        return loss
+
+    def CE_pred(self, logits):
+        pred = torch.argmax(logits, dim=-1)
+        return pred
+        
 
     def AT_focal_loss(self, logits, labels):
         th_label = torch.zeros_like(labels, dtype=torch.float).to(labels)

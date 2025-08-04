@@ -399,9 +399,9 @@ class Model(nn.Module):
         logits = self.bilinear(relation_rep)
 
         if not is_training:
-            return self.loss.AT_pred(logits), batch_labels
+            return self.loss.CE_pred(logits), batch_labels
             
-        at_loss = self.loss.AT_focal_loss(logits, batch_labels)
+        at_loss = self.loss.CE_focal_loss(logits, batch_labels)
 
         kd_loss = torch.tensor(0.0)
         current_tradeoff = 0.0
