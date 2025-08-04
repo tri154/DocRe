@@ -47,7 +47,7 @@ class Loss:
 
     def CE_pred(self, logits):
         pred = torch.argmax(logits, dim=-1)
-        one_hot_pred = F.one_hot(pred, num_classes=2).float()
+        one_hot_pred = F.one_hot(pred, num_classes=self.cfg.num_rel).float()
         return one_hot_pred
         
 
