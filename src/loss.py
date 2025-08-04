@@ -26,6 +26,30 @@ class Loss:
         loss = loss1 + loss2
         loss = loss.mean()
         return loss
+
+
+    def AT_focal_loss(self, logits, labels):
+        th_label = torch.zeros_like(labels, dtype=torch.float).to(labels)
+        th_label[:, self.cfg.id_rel_thre] = 1.0
+        labels[:, self.cfg.id_rel_thre] = 0.0
+
+        p_mask = labels + th_label
+        n_mask = 1 - labels
+
+        # Rank positive classes to TH
+        logit1 = logits - (1 - p_mask) * 1e30
+        log_pred_soft1 = F.log_softmax(logit1, dim=-1)
+        loss1 = -(torch.pow(1.0 - log_pred_soft1.exp(), self.cfg.focal_gamma) * log_pred_soft1 * labels).sum(1)
+
+        # Rank TH to negative classes
+        logit2 = logits - (1 - n_mask) * 1e30
+        log_pred_soft2 = F.log_softmax(logit2, dim=-1)
+        loss2 = -(torch.pow(1.0 - log_pred_soft2.exp(), self.cfg.focal_gamma) * log_pred_soft2 * th_label).sum(1)
+
+        # Sum two parts
+        loss = loss1 + loss2
+        loss = loss.mean()
+        return loss
     
     def AT_pred(self, logits):
         th_logit = logits[:, self.cfg.id_rel_thre].unsqueeze(1)
@@ -38,23 +62,6 @@ class Loss:
         output[mask] = 1.0
         output[:, 0] = (output.sum(1) == 0.).to(logits)
         return output
-
-    def AT_loss(self, batch_RE_reps, batch_epair_rels): #dont use anymore because of clone.
-        batch_pos_thre = torch.clone(batch_epair_rels)
-        batch_pos_thre[:, self.cfg.id_rel_thre] = 1
-
-        batch_pos_reps = batch_RE_reps + (1 - batch_pos_thre) * self.cfg.small_negative
-        batch_pos_loss = - (F.log_softmax(batch_pos_reps, dim=-1) * batch_epair_rels)
-        batch_pos_loss = batch_pos_loss.sum(-1)
-
-        batch_neg_thre = 1 - batch_epair_rels
-        batch_thre_rels = torch.zeros_like(batch_neg_thre)
-        batch_thre_rels[:, self.cfg.id_rel_thre] = 1
-        batch_neg_reps = batch_RE_reps + (1 - batch_neg_thre) * self.cfg.small_negative
-        batch_neg_loss = - (F.log_softmax(batch_neg_reps, dim=-1) * batch_thre_rels)
-        batch_neg_loss = batch_neg_loss.sum(-1)
-
-        return (batch_pos_loss + batch_neg_loss).mean()
 
     def PSD_loss(self, logits, teacher_logits, current_epoch):
         current_temp = self.cfg.upper_temp - (self.cfg.upper_temp - self.cfg.lower_temp) * current_epoch / (self.cfg.num_epoch - 1.0)

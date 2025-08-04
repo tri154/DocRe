@@ -40,6 +40,8 @@ USE_SC=True
 SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
+FOCAL_GAMMA=2.5
+
 python main.py \
   --dataset $DATASET \
   --save_path $SAVE_PATH \
@@ -68,4 +70,5 @@ python main.py \
   --loss_tradeoff $LOSS_TRADEOFF \
   --use_sc $USE_SC \
   --sc_temp $SC_TEMP \
-  --sc_weight $SC_WEIGHT
+  --sc_weight $SC_WEIGHT \
+  --focal_gamma $FOCAL_GAMMA

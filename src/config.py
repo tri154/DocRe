@@ -57,6 +57,8 @@ def parse_args():
     parser.add_argument('--sc_temp', type=float, default=1.0)
     parser.add_argument('--sc_weight', type=float, default=1.0)
 
+    parser.add_argument('--focal_gamma', type=float, default=2.5)
+
     args = parser.parse_args()
     
     return args
