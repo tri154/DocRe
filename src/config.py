@@ -36,6 +36,7 @@ def parse_args():
     parser.add_argument("--new_lr", type=float, default=1e-4)
     parser.add_argument("--pretrained_lr", type=float, default=5e-5)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
+    parser.add_argument("--patience", type=int, default=-1)
 
 
     parser.add_argument('--device', type=str, default='cuda:0')

@@ -153,6 +153,8 @@ class Trainer:
         for  batch_input in self.prepare_batch(self.cfg.train_batch_size):
             loss = self.model(batch_input, is_training=True)
             print(loss)
+            # preds, labels = self.model(batch_input, is_training=False)
+            # print(preds)
             input("Stop")
 
     def PSD_add_logits(self, batch_logits, indicies):
@@ -181,13 +183,13 @@ class Trainer:
                 self.sched.step()
 
 
-    def train(self, num_epoches, batch_size, train_set=None, no_tqdm=False):
+    def train(self, num_epoches, batch_size, train_set=None, no_tqdm=False, patience=-1):
         if train_set is not None:
             self.train_set = train_set
 
         self.best_f1_dev = 0
+        patience_counter = 0
         for idx_epoch in range(num_epoches):
-
             print(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
             self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
 
@@ -197,9 +199,17 @@ class Trainer:
             print(f"epoch: {idx_epoch}, Dev result: P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
             self.cfg.logging(f"epoch: {idx_epoch}, Dev result: P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
             
-            if d_f1 >= self.best_f1_dev:
+            if d_f1 > self.best_f1_dev:
                 self.best_f1_dev = d_f1
                 torch.save(self.model.state_dict(), self.cfg.save_path)
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= patience and patience > 0:
+                    print("Early stopping triggered.")
+                    self.cfg.logging("Early stopping triggered.")
+                    break
+                    
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
