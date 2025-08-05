@@ -57,6 +57,7 @@ def parse_args():
     parser.add_argument('--sc_temp', type=float, default=1.0)
     parser.add_argument('--sc_weight', type=float, default=1.0)
 
+    parser.add_argument('--re_loss', type=str, default='AT')
     parser.add_argument('--focal_gamma', type=float, default=2.5)
 
     args = parser.parse_args()
@@ -105,11 +106,18 @@ class Config:
 
 
         self.data_ner2id = json.load(open(os.path.join(self.dir_dataset_ori, 'ner2id.json'), 'r'))
-        self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
+        if self.re_loss == 'AT':
+            self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id.json'), 'r'))
+        elif self.re_loss == 'CE':
+            self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
+        else:
+            raise Exception("Define loss function.")
+
         self.data_id2ner = {v: k for k, v in self.data_ner2id.items()}
         self.data_id2rel = {v: k for k, v in self.data_rel2id.items()}
 
-        # self.id_rel_thre = self.data_rel2id['Na']
+        if self.re_loss == 'AT':
+            self.id_rel_thre = self.data_rel2id['Na']
         self.num_ner = len(self.data_ner2id)
         self.num_rel = len(self.data_rel2id)
 

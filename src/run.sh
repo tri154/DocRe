@@ -17,12 +17,12 @@ NEW_LR=1e-4
 PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
-DEVICE="cuda:0"
-# DEVICE="cpu"
+# DEVICE="cuda:0"
+DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
-GRAPH_TYPE='rgcn'
+GRAPH_TYPE="rgcn"
 NUM_BASES=2
 TYPE_DIM=20
 LOW_LAYERS=1
@@ -40,6 +40,7 @@ USE_SC=True
 SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
+RE_LOSS="CE"
 FOCAL_GAMMA=2.5
 
 python main.py \
@@ -71,4 +72,5 @@ python main.py \
   --use_sc $USE_SC \
   --sc_temp $SC_TEMP \
   --sc_weight $SC_WEIGHT \
-  --focal_gamma $FOCAL_GAMMA
+  --focal_gamma $FOCAL_GAMMA \
+  --re_loss $RE_LOSS
