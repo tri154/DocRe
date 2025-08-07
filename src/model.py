@@ -299,7 +299,7 @@ class Model(nn.Module):
 
         device = self.cfg.device
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_entity_per_doc).unsqueeze(-1).to(device)
-        batch_entity_att = batch_token_atts[batch_did, :, batch_start_mpos] #NOTE: might take lot of memory.
+        batch_entity_att = batch_token_atts[batch_did, :, batch_start_mpos] # NOTE: might take lot of memory.
         self.check(batch_entity_att, batch_titles)
         batch_entity_att = torch.sum(batch_entity_att, dim=1) / (num_mention_per_entity.unsqueeze(-1).unsqueeze(-1) + 1e-5)
         self.check(batch_entity_att, batch_titles)
@@ -308,7 +308,15 @@ class Model(nn.Module):
 
         batch_entity_att = torch.split(batch_entity_att, num_entity_per_doc.tolist())
         batch_entity_att = pad_sequence(batch_entity_att, batch_first=True, padding_value = 0.0) # 4, max_num_e, 512
+        # print(batch_entity_att[1, 5, -16:])
+        # input("Con")
+        # print(batch_token_embs[1, -16:, :])
+        # torch.Size([4, 17, 625])
+        # torch.Size([4, 625, 512])
+
         batch_entity_att = torch.bmm(batch_entity_att, batch_token_embs[:, :-1])  # 4, max_e_num, 512
+        # print(batch_entity_att[1, 5, :])
+        # input()
         self.check(batch_entity_att, batch_titles)
 
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).unsqueeze(-1).to(device)
