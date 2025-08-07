@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import inspect
 class Loss:
     def __init__(self, cfg):
         self.cfg = cfg
@@ -27,20 +28,35 @@ class Loss:
         loss = loss.mean()
         return loss
 
-    def CE_focal_loss(self, logits, labels):
+    def check(self, tensor, batch_titles):
+        nan_mask = torch.isnan(tensor)
+        inf_mask = torch.isinf(tensor)
+
+        has_issue = nan_mask.any().item() or inf_mask.any().item()
+
+        if(has_issue):
+            self.cfg.logging(f"{batch_titles}, line: {inspect.currentframe().f_back.f_lineno}, loss funtion")
+        return has_issue
+
+    def CE_focal_loss(self, logits, labels, batch_titles=None):
         device = self.cfg.device
         log_probs = F.log_softmax(logits, dim=-1)
+        self.check(log_probs, batch_titles)
 
         loss = - torch.pow(1.0 - log_probs.exp(), self.cfg.focal_gamma) * log_probs * labels
+        self.check(loss, batch_titles)
 
         counts = labels.sum(dim=0)
         alpha = torch.zeros_like(counts).to(device)
         nonzero_mask = counts != 0
         alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        self.check(alpha, batch_titles)
         alpha = alpha / alpha.sum()
+        self.check(alpha, batch_titles)
         alpha = alpha.unsqueeze(0)
         
         loss = alpha * loss
+        self.check(loss, batch_titles)
         loss = loss.sum(-1).mean()
 
         return loss
