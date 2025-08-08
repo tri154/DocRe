@@ -8,7 +8,7 @@ from collections import deque
 from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.rgat import RGAT
-from models.cnn import CNN
+# from models.cnn import CNN
 from loss import Loss
 
 class Model(nn.Module):
@@ -43,10 +43,10 @@ class Model(nn.Module):
         else:
             raise Exception("Define graph model.")
 
-        self.cnn = CNN(emb_size, device=self.cfg.device)
+        # self.cnn = CNN(emb_size, device=self.cfg.device)
 
         self.MIP_Linear = nn.Sequential(
-            nn.Linear(emb_size * 5, emb_size * 2),
+            nn.Linear(emb_size * 4, emb_size * 2),
             nn.LayerNorm(emb_size * 2),
             nn.Tanh(),
             nn.Dropout(0.1),
@@ -358,7 +358,6 @@ class Model(nn.Module):
         ent_ent_links = self.get_ent_ent_links(batch_ents_link, num_entlink_per_doc, num_entity_per_doc)
         ent_sent_links = self.get_ent_sent_links(batch_eid2sid, num_entity_per_doc, num_sent_per_doc, num_per_type)
 
-        #======================
         edges = [ent_ment_links,
                 sent_sent_links,
                 ment_sent_links,
@@ -366,20 +365,16 @@ class Model(nn.Module):
                 ent_ent_links,
                 ent_sent_links]
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
-        #======================
-        # edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links, ent_ent_links, ent_sent_links]
-        # edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
-        # edges = torch.cat(edges, dim=-1)
+        # ============================
 
-
-        relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
-        relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
+        # relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
+        # relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
         graph_feat = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
-        cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
+        # cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
         att_feat = self.compute_att_features(batch_token_embs,
                                              batch_token_atts,
@@ -391,8 +386,10 @@ class Model(nn.Module):
                                              num_rel_per_doc,
                                              batch_titles)
         
-        relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
+        # relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
+        relation_rep = torch.cat([graph_feat, att_feat], dim=-1)
 
+        # ============================
         sc_loss = 0
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
