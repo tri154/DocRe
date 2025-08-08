@@ -6,12 +6,10 @@ from torch_geometric.utils import to_undirected
 from collections import deque
 
 from models.transformers import Transformer
-from models.rgcn import RGCN
 from models.custom_rgcn import CustomRGCN
 from models.rgat import RGAT
 from models.cnn import CNN
 from loss import Loss
-import inspect
 
 class Model(nn.Module):
 
@@ -300,44 +298,20 @@ class Model(nn.Module):
         device = self.cfg.device
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_entity_per_doc).unsqueeze(-1).to(device)
         batch_entity_att = batch_token_atts[batch_did, :, batch_start_mpos] # NOTE: might take lot of memory.
-        self.check(batch_entity_att, batch_titles)
         batch_entity_att = torch.sum(batch_entity_att, dim=1) / (num_mention_per_entity.unsqueeze(-1).unsqueeze(-1) + 1e-5)
-        self.check(batch_entity_att, batch_titles)
         batch_entity_att = batch_entity_att.mean(dim=1) # 16, 370 ,TESTED
-        self.check(batch_entity_att, batch_titles)
 
         batch_entity_att = torch.split(batch_entity_att, num_entity_per_doc.tolist())
         batch_entity_att = pad_sequence(batch_entity_att, batch_first=True, padding_value = 0.0) # 4, max_num_e, 512
-        # print(batch_entity_att[1, 5, -16:])
-        # input("Con")
-        # print(batch_token_embs[1, -16:, :])
-        # torch.Size([4, 17, 625])
-        # torch.Size([4, 625, 512])
 
         batch_entity_att = torch.bmm(batch_entity_att, batch_token_embs[:, :-1])  # 4, max_e_num, 512
-        # print(batch_entity_att[1, 5, :])
-        # input()
-        self.check(batch_entity_att, batch_titles)
 
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).unsqueeze(-1).to(device)
         pair_entities = torch.stack([head_entities, tail_entities], dim=-1)
         e_tw = batch_entity_att[batch_did, pair_entities]
-        self.check(e_tw, batch_titles)
         e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
-        self.check(e_tw, batch_titles)
         return e_tw
 
-        
-    def check(self, tensor, batch_titles):
-        nan_mask = torch.isnan(tensor)
-        inf_mask = torch.isinf(tensor)
-
-        has_issue = nan_mask.any().item() or inf_mask.any().item()
-
-        if(has_issue):
-            self.cfg.logging(f"{batch_titles}, line: {inspect.currentframe().f_back.f_lineno}")
-        return has_issue
-    
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_titles = batch_input['batch_titles']
         batch_token_seqs = batch_input['batch_token_seqs']
@@ -361,14 +335,9 @@ class Model(nn.Module):
         self.cur_batch_size = len(batch_token_seqs)
 
         batch_token_embs, batch_token_atts = self.transformer(batch_token_seqs, batch_token_masks, batch_token_types)
-        self.check(batch_token_embs, batch_titles)
-        self.check(batch_token_atts, batch_titles)
-
         batch_token_embs = self.extractor_trans(batch_token_embs)
-        self.check(batch_token_embs, batch_titles)
 
         batch_token_embs = F.pad(batch_token_embs, (0, 0, 0, 1), value=self.cfg.small_negative)
-        self.check(batch_token_embs, batch_titles)
 
         batch_node_embs, nodes_type, num_per_type = self.compute_node_embs(batch_token_embs,
                                                                           batch_token_atts,
@@ -377,7 +346,6 @@ class Model(nn.Module):
                                                                           num_entity_per_doc,
                                                                           num_mention_per_doc)
     
-        self.check(batch_node_embs, batch_titles)
         #nodes order:
         # doc1_e1, doc1_e2 ... doc1_en, doc2_e1, ...
         # doc1_e1_mention_1, doc1_e1_mention2, ...
@@ -398,8 +366,6 @@ class Model(nn.Module):
                 ent_ent_links,
                 ent_sent_links]
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
-        self.check(gcn_nodes[0], batch_titles)
-        self.check(gcn_nodes[-1], batch_titles)
         #======================
         # edges = [ent_ment_links, sent_sent_links, ment_sent_links, ment_ment_links, ent_ent_links, ent_sent_links]
         # edges_type = torch.arange(len(edges), device=device).repeat_interleave(torch.tensor([ts.shape[-1] for ts in edges], device=device))
@@ -407,20 +373,14 @@ class Model(nn.Module):
 
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
-        self.check(relation_map, batch_titles)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
-        self.check(relation_map, batch_titles)
 
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
-        self.check(gcn_nodes, batch_titles)
 
         graph_feat = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
-        self.check(graph_feat, batch_titles)
         cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
-        self.check(cnn_feat, batch_titles)
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
-        self.check(batch_token_atts, batch_titles)
         att_feat = self.compute_att_features(batch_token_embs,
                                              batch_token_atts,
                                              batch_start_mpos,
@@ -430,19 +390,15 @@ class Model(nn.Module):
                                              num_mention_per_entity,
                                              num_rel_per_doc,
                                              batch_titles)
-        self.check(att_feat, batch_titles)
         
         relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
-        self.check(relation_rep, batch_titles)
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         relation_rep = self.MIP_Linear(relation_rep)
-        self.check(relation_rep, batch_titles)
         logits = self.bilinear(relation_rep)
-        self.check(logits, batch_titles)
 
         if not is_training:
             if self.cfg.re_loss == 'AT':

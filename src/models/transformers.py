@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoConfig, AutoModel, AutoTokenizer
-import inspect
 
 class Transformer(nn.Module):
     def __init__(self, cfg):
@@ -105,7 +104,7 @@ class Transformer(nn.Module):
             batch_token_embs, batch_token_atts = batch_output[0], batch_output[-1][-1]
             return batch_token_embs, batch_token_atts
 
-        num_token_per_doc = batch_token_masks.sum(1).int().tolist() #[625, 610, 347, 120]
+        num_token_per_doc = batch_token_masks.sum(1).int().tolist()
 
         token_seqs = list()
         token_masks = list()
@@ -227,19 +226,7 @@ class Transformer(nn.Module):
                 pad_len = max_doc_length - t_masks.shape[0]
                 if pad_len > 0:
                     t_masks = F.pad(t_masks, pad=(0, max_doc_length - t_masks.shape[0]), value=1.0)
-                # ==============================
-                # doc_token_embs = t_embs.sum(0) / (t_masks.sum(dim=0).unsqueeze(-1) + self.cfg.small_positive)
-                # doc_token_embs = t_embs.sum(0) / t_masks.sum(dim=0).unsqueeze(-1)
                 doc_token_embs = t_embs.sum(0) / t_masks.unsqueeze(-1)
-                # if self.check(doc_token_embs, None):
-                #     print(t_embs[1, -16:])
-                #     print(t_masks[-16:])
-                #     input("still error")
-                    # temp = t_masks.sum(dim=0).unsqueeze(-1)
-                    # print(t_embs[1, -16:])
-                    # print(temp.T)
-                    # input()
-                # ==============================
                 doc_token_atts = t_atts.sum(0)
                 doc_token_atts = doc_token_atts / (doc_token_atts.sum(-1, keepdim=True) + self.cfg.small_positive)
                 batch_token_embs.append(doc_token_embs)
@@ -249,16 +236,6 @@ class Transformer(nn.Module):
         batch_token_embs = torch.stack(batch_token_embs)
         batch_token_atts = torch.stack(batch_token_atts)
         return batch_token_embs, batch_token_atts
-
-    def check(self, tensor, batch_titles):
-        nan_mask = torch.isnan(tensor)
-        inf_mask = torch.isinf(tensor)
-
-        has_issue = nan_mask.any().item() or inf_mask.any().item()
-
-        if(has_issue):
-            self.cfg.logging(f"{batch_titles}, line: {inspect.currentframe().f_back.f_lineno}")
-        return has_issue
 
     def forward(self, batch_token_seqs, batch_token_masks, batch_token_types):
         if self.cfg.seq_process_type == 'sd':
