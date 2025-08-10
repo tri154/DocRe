@@ -171,10 +171,12 @@ class Trainer:
         num_batch = math.ceil(len(self.train_set) / batch_size)
 
 
+        total_loss = 0.0
         for idx_batch, batch_input in enumerate(tqdm(self.prepare_batch(batch_size), total=num_batch, disable=no_tqdm)):
             batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
             if self.cfg.use_psd:
                 self.PSD_add_logits(batch_logits, batch_input['indices'])
+            total_loss += batch_loss.item()
             (batch_loss / self.cfg.update_freq).backward()
 
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
@@ -182,6 +184,7 @@ class Trainer:
                 self.opt.step()
                 self.opt.zero_grad()
                 self.sched.step()
+        return total_loss
 
 
     def train(self, num_epoches, batch_size, train_set=None, no_tqdm=False, patience=-1):
@@ -194,11 +197,11 @@ class Trainer:
             print(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
             self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
 
-            self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
+            epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
 
-            d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
-            print(f"epoch: {idx_epoch}, Dev result: P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
-            self.cfg.logging(f"epoch: {idx_epoch}, Dev result: P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
+            d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
+            print(f"epoch: {idx_epoch}, Dev result: loss={epoch_loss:5f}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
+            self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
             
             if d_f1 > self.best_f1_dev:
                 self.best_f1_dev = d_f1
@@ -214,8 +217,8 @@ class Trainer:
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
-        self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
-        print(f"Test result: P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
-        self.cfg.logging(f"Test result: P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
+        t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
+        print(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
+        self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
 
         return self.best_f1_dev

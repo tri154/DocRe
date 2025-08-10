@@ -133,7 +133,7 @@ class Tester:
         precision = tp / (tp + fp + epsilon)
         recall = tp / (tp + fn + epsilon)
         f1 = 2 * precision * recall / (precision + recall + epsilon)
-        return precision, recall, f1
+        return tp, fp, fn, precision, recall, f1
 
     def cal_f1_overall(self, preds, labels, epsilon=1e-8):
         preds = torch.argmax(preds, dim=1).to(dtype=torch.int)
@@ -157,7 +157,7 @@ class Tester:
         recall = total_tp / (total_tp + total_fn + epsilon)
         f1 = 2 * precision * recall / (precision + recall + epsilon)
     
-        return precision, recall, f1
+        return total_tp, total_fp, total_fn, precision, recall, f1
         
     def test(self, model, dataset='dev'):
         model.eval()
@@ -172,5 +172,5 @@ class Tester:
         all_preds = torch.cat(all_preds, dim=0).to(self.cfg.device)
         all_labels = torch.cat(all_labels, dim=0).to(self.cfg.device)
 
-        precision, recall, f1 = self.cal_f1(all_preds, all_labels)
-        return precision, recall, f1
+        tp, fp, fn, precision, recall, f1 = self.cal_f1(all_preds, all_labels)
+        return tp, fp, fn, precision, recall, f1
