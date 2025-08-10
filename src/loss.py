@@ -102,7 +102,7 @@ class Loss:
         one_hot_pred = F.one_hot(pred, num_classes=self.cfg.num_rel).float()
         return one_hot_pred
 
-    def sigmoidF1_loss(self, logits, labels, option=3):
+    def sigmoidF1_loss(self, logits, labels):
         device = self.cfg.device
         β = self.cfg.β 
         η = self.cfg.η 
@@ -115,27 +115,15 @@ class Loss:
         fn = torch.sum((1 - sig) * labels, dim=0)
         sigmoid_f1 = (2 * tp) / (2 * tp + fn + fp + self.cfg.small_positive)
 
-        # Option1: Only return F1 of main class.
-        if option == 1:
-            class_id = self.cfg.data_rel2id[self.cfg.rel]
-            return 1.0 - sigmoid_f1[class_id]
+        counts = labels.sum(dim=0)
+        alpha = torch.zeros_like(counts).to(device)
+        nonzero_mask = counts != 0
+        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        alpha = alpha / alpha.sum()
+        alpha = alpha.unsqueeze(0)
 
-        # Option2: Classes are equally treated.
-        if option == 2:
-            return 1.0 - sigmoid_f1.mean()
+        return 1.0 - torch.sum(sigmoid_f1 * alpha)
 
-        # Option3: Classes are differently treated.
-        if option == 3:
-            counts = labels.sum(dim=0)
-            alpha = torch.zeros_like(counts).to(device)
-            nonzero_mask = counts != 0
-            alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
-            alpha = alpha / alpha.sum()
-            alpha = alpha.unsqueeze(0)
-            return 1.0 - torch.sum(sigmoid_f1 * alpha)
-
-        raise Exception("ERROR.")
-    
     def PSD_loss(self, logits, teacher_logits, current_epoch):
         current_temp = self.cfg.upper_temp - (self.cfg.upper_temp - self.cfg.lower_temp) * current_epoch / (self.cfg.num_epoch - 1.0)
         current_tradeoff = self.cfg.loss_tradeoff * current_epoch / (self.cfg.num_epoch - 1.0)
