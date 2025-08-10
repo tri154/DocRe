@@ -59,7 +59,9 @@ def parse_args():
     parser.add_argument('--sc_weight', type=float, default=1.0)
 
     parser.add_argument('--re_loss', type=str, default='AT')
-    parser.add_argument('--focal_gamma', type=float, default=2.5)
+    parser.add_argument('--focal_gamma', type=float, default=2.5, help="For AT and CE focal loss.")
+    parser.add_argument('--β', type=float, default=1, help="For sigmoidF1, =1 for normal sigmoid.")
+    parser.add_argument('--η', type=float, default=0, help="For sigmoidF1, =0 for normal sigmoid.")
 
     args = parser.parse_args()
     
@@ -110,6 +112,8 @@ class Config:
         if self.re_loss == 'AT':
             self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id.json'), 'r'))
         elif self.re_loss == 'CE':
+            self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
+        elif self.re_loss == 'SF1':
             self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
         else:
             raise Exception("Define loss function.")

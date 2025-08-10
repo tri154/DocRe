@@ -398,26 +398,15 @@ class Model(nn.Module):
         logits = self.bilinear(relation_rep)
 
         if not is_training:
-            if self.cfg.re_loss == 'AT':
-                return self.loss.AT_pred(logits), batch_labels
-            elif self.cfg.re_loss == 'CE':
-                return self.loss.CE_pred(logits), batch_labels
-            else:
-                raise Exception("Define loss funciton.")
+            return self.loss.predict(logits), batch_labels
             
-        if self.cfg.re_loss == 'AT':
-            at_loss = self.loss.AT_focal_loss(logits, batch_labels)
-        elif self.cfg.re_loss == 'CE':
-            at_loss = self.loss.CE_focal_loss(logits, batch_labels, batch_titles)
-        else:
-            raise Exception("Define loss funciton.")
+        re_loss = self.loss.cal_loss(logits, batch_labels)
 
         kd_loss = torch.tensor(0.0)
         current_tradeoff = 0.0
         if batch_teacher_logits is not None:
             kd_loss, current_tradeoff = self.loss.PSD_loss(logits, batch_teacher_logits, current_epoch)
 
-
-        loss = at_loss + current_tradeoff * kd_loss  + self.cfg.sc_weight * sc_loss
+        loss = re_loss + current_tradeoff * kd_loss  + self.cfg.sc_weight * sc_loss
         return loss, torch.split(logits.detach().cpu(), num_rel_per_doc.tolist())
         

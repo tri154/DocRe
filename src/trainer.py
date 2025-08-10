@@ -44,6 +44,7 @@ class Trainer:
 
         return opt, sched
 
+
     def prepare_batch(self, batch_size):
         inputs = self.train_set
 
@@ -150,8 +151,8 @@ class Trainer:
                     }
 
     def debug(self):
-        for  batch_input in self.prepare_batch(self.cfg.train_batch_size):
-            loss = self.model(batch_input, is_training=True)
+        for batch_input in self.prepare_batch(self.cfg.train_batch_size):
+            loss, _ = self.model(batch_input, is_training=True)
             print(loss)
             # preds, labels = self.model(batch_input, is_training=False)
             # print(preds)

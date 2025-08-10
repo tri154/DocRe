@@ -1,11 +1,26 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import inspect
+
 class Loss:
     def __init__(self, cfg):
         self.cfg = cfg
         self.kd_loss = nn.KLDivLoss(reduction='batchmean')
+
+        # Wrapper
+        if self.cfg.re_loss == 'AT':
+            self.cal_loss = self.AT_focal_loss
+            self.predict = self.AT_pred
+        elif self.cfg.re_loss == 'CE':
+            self.cal_loss = self.CE_focal_loss
+            self.predict = self.CE_pred
+        elif self.cfg.re_loss == 'SF1':
+            self.cal_loss = self.sigmoidF1_loss
+            self.predict = self.CE_pred
+        else:
+            raise Exception("Define loss function.")
+            
+
 
     def AT_loss_original(self, logits, labels):
         th_label = torch.zeros_like(labels, dtype=torch.float).to(labels)
@@ -28,29 +43,6 @@ class Loss:
         loss = loss.mean()
         return loss
 
-    def CE_focal_loss(self, logits, labels, batch_titles=None):
-        device = self.cfg.device
-
-        log_probs = F.log_softmax(logits, dim=-1)
-        loss = - torch.pow(1.0 - log_probs.exp(), self.cfg.focal_gamma) * log_probs * labels
-
-        counts = labels.sum(dim=0)
-        alpha = torch.zeros_like(counts).to(device)
-        nonzero_mask = counts != 0
-        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
-        alpha = alpha / alpha.sum()
-        alpha = alpha.unsqueeze(0)
-        
-        loss = alpha * loss
-        loss = loss.sum(-1).mean()
-
-        return loss
-
-    def CE_pred(self, logits):
-        pred = torch.argmax(logits, dim=-1)
-        one_hot_pred = F.one_hot(pred, num_classes=self.cfg.num_rel).float()
-        return one_hot_pred
-        
 
     def AT_focal_loss(self, logits, labels):
         th_label = torch.zeros_like(labels, dtype=torch.float).to(labels)
@@ -87,6 +79,63 @@ class Loss:
         output[:, 0] = (output.sum(1) == 0.).to(logits)
         return output
 
+    def CE_focal_loss(self, logits, labels):
+        device = self.cfg.device
+
+        log_probs = F.log_softmax(logits, dim=-1)
+        loss = - torch.pow(1.0 - log_probs.exp(), self.cfg.focal_gamma) * log_probs * labels
+
+        counts = labels.sum(dim=0)
+        alpha = torch.zeros_like(counts).to(device)
+        nonzero_mask = counts != 0
+        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        alpha = alpha / alpha.sum()
+        alpha = alpha.unsqueeze(0)
+        
+        loss = alpha * loss
+        loss = loss.sum(-1).mean()
+
+        return loss
+
+    def CE_pred(self, logits):
+        pred = torch.argmax(logits, dim=-1)
+        one_hot_pred = F.one_hot(pred, num_classes=self.cfg.num_rel).float()
+        return one_hot_pred
+
+    def sigmoidF1_loss(self, logits, labels, option=3):
+        device = self.cfg.device
+        β = self.cfg.β 
+        η = self.cfg.η 
+
+        logits = β * (logits + η)
+        sig = torch.sigmoid(logits)
+
+        tp = torch.sum(sig * labels, dim=0)
+        fp = torch.sum(sig * (1.0 - labels), dim=0)
+        fn = torch.sum((1 - sig) * labels, dim=0)
+        sigmoid_f1 = (2 * tp) / (2 * tp + fn + fp + self.cfg.small_positive)
+
+        # Option1: Only return F1 of main class.
+        if option == 1:
+            class_id = self.cfg.data_rel2id[self.cfg.rel]
+            return 1.0 - sigmoid_f1[class_id]
+
+        # Option2: Classes are equally treated.
+        if option == 2:
+            return 1.0 - sigmoid_f1.mean()
+
+        # Option3: Classes are differently treated.
+        if option == 3:
+            counts = labels.sum(dim=0)
+            alpha = torch.zeros_like(counts).to(device)
+            nonzero_mask = counts != 0
+            alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+            alpha = alpha / alpha.sum()
+            alpha = alpha.unsqueeze(0)
+            return 1.0 - torch.sum(sigmoid_f1 * alpha)
+
+        raise Exception("ERROR.")
+    
     def PSD_loss(self, logits, teacher_logits, current_epoch):
         current_temp = self.cfg.upper_temp - (self.cfg.upper_temp - self.cfg.lower_temp) * current_epoch / (self.cfg.num_epoch - 1.0)
         current_tradeoff = self.cfg.loss_tradeoff * current_epoch / (self.cfg.num_epoch - 1.0)

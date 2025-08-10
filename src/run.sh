@@ -37,12 +37,14 @@ UPPER_TEMP=20.0
 LOSS_TRADEOFF=4.999979907145212
 
 
-USE_SC=True
+USE_SC=False
 SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
-RE_LOSS="CE"
+RE_LOSS="SF1"
 FOCAL_GAMMA=2.5
+BETA=1.0
+ETA=0.0
 
 python main.py \
   --dataset $DATASET \
@@ -75,4 +77,6 @@ python main.py \
   --sc_temp $SC_TEMP \
   --sc_weight $SC_WEIGHT \
   --focal_gamma $FOCAL_GAMMA \
-  --re_loss $RE_LOSS
+  --re_loss $RE_LOSS \
+  --β $BETA \
+  --η $ETA 
