@@ -109,6 +109,7 @@ class Loss:
         device = self.cfg.device
         β = self.cfg.β
         η = self.cfg.η
+        penalty_weight = self.cfg.penalty_weight
 
         logits = β * (logits + η)
         sig = torch.sigmoid(logits)
@@ -117,6 +118,7 @@ class Loss:
         fp = torch.sum(sig * (1.0 - labels), dim=0)
         fn = torch.sum((1 - sig) * labels, dim=0)
         sigmoid_f1 = (2 * tp) / (2 * tp + fn + fp + self.cfg.small_positive)
+        penalty = (fp - fn) ** 2
 
         counts = labels.sum(dim=0)
         alpha = torch.zeros_like(counts).to(device)
@@ -125,9 +127,11 @@ class Loss:
         alpha = alpha / alpha.sum()
         alpha = alpha.unsqueeze(0)
 
-        return 1.0 - torch.sum(sigmoid_f1 * alpha)
+        loss = 1.0 - torch.sum(sigmoid_f1 * alpha) + penalty_weight * torch.sum(penalty * alpha)
+        return loss
 
     def softmaxF1_loss(self, logits, labels):
+        penalty_weight = self.cfg.penalty_weight
         device = self.cfg.device
         T = self.cfg.T
 
@@ -137,6 +141,7 @@ class Loss:
         fp = torch.sum(probs * (1.0 - labels), dim=0)
         fn = torch.sum((1.0 - probs) * labels, dim=0)
         softmax_f1 = (2 * tp) / (2 * tp + fn + fp + self.cfg.small_positive)
+        penalty = (fp - fn) ** 2
 
         counts = labels.sum(dim=0)
         alpha = torch.zeros_like(counts).to(device)
@@ -145,7 +150,8 @@ class Loss:
         alpha = alpha / alpha.sum()
         alpha = alpha.unsqueeze(0)
 
-        return 1.0 - torch.sum(softmax_f1 * alpha)
+        loss = 1.0 - torch.sum(softmax_f1 * alpha) + penalty_weight * torch.sum(penalty * alpha)
+        return loss
 
     def PSD_loss(self, logits, teacher_logits, current_epoch):
         current_temp = self.cfg.upper_temp - (self.cfg.upper_temp - self.cfg.lower_temp) * current_epoch / (self.cfg.num_epoch - 1.0)

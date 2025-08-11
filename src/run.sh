@@ -28,10 +28,8 @@ NUM_BASES=2
 TYPE_DIM=20
 LOW_LAYERS=1
 HIGH_LAYERS=2
-# GRAPH_LAYERS=3 #NOTE min=2
-# DISTANCE=3 #NOTE min=3
 
-USE_PSD=True
+USE_PSD=False
 LOWER_TEMP=2.0
 UPPER_TEMP=20.0
 LOSS_TRADEOFF=4.999979907145212
@@ -41,11 +39,12 @@ USE_SC=False
 SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
-RE_LOSS="softmaxF1" # AT, CE, sigmoidF1, softmaxF1
+RE_LOSS="sigmoidF1" # AT, CE, sigmoidF1, softmaxF1
 FOCAL_GAMMA=2.5
 BETA=1.0
 ETA=0.0
 T=1.0
+PENALTY_WEIGHT=0.1
 
 python main.py \
   --dataset $DATASET \
@@ -81,4 +80,5 @@ python main.py \
   --re_loss $RE_LOSS \
   --β $BETA \
   --η $ETA \
-  --T $T
+  --T $T \
+  --penalty_weight $PENALTY_WEIGHT

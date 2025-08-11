@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument('--β', type=float, default=1, help="For sigmoidF1, =1 for normal sigmoid.")
     parser.add_argument('--η', type=float, default=0, help="For sigmoidF1, =0 for normal sigmoid.")
     parser.add_argument('--T', type=float, default=1.0, help="For softmaxF1, =1 for normal softmax.")
+    parser.add_argument('--penalty_weight', default=1.0, type=float, help="For regularization, sigmoidF1, softmaxF1.")
 
     args = parser.parse_args()
 
