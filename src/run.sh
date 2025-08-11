@@ -41,10 +41,11 @@ USE_SC=False
 SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
-RE_LOSS="SF1"
+RE_LOSS="softmaxF1" # AT, CE, sigmoidF1, softmaxF1
 FOCAL_GAMMA=2.5
 BETA=1.0
 ETA=0.0
+T=1.0
 
 python main.py \
   --dataset $DATASET \
@@ -79,4 +80,5 @@ python main.py \
   --focal_gamma $FOCAL_GAMMA \
   --re_loss $RE_LOSS \
   --β $BETA \
-  --η $ETA 
+  --η $ETA \
+  --T $T

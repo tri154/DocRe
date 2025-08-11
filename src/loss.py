@@ -14,12 +14,15 @@ class Loss:
         elif self.cfg.re_loss == 'CE':
             self.cal_loss = self.CE_focal_loss
             self.predict = self.CE_pred
-        elif self.cfg.re_loss == 'SF1':
+        elif self.cfg.re_loss == 'sigmoidF1':
             self.cal_loss = self.sigmoidF1_loss
+            self.predict = self.CE_pred
+        elif self.cfg.re_loss == 'softmaxF1':
+            self.cal_loss = self.softmaxF1_loss_log
             self.predict = self.CE_pred
         else:
             raise Exception("Define loss function.")
-            
+
 
 
     def AT_loss_original(self, logits, labels):
@@ -66,7 +69,7 @@ class Loss:
         loss = loss1 + loss2
         loss = loss.mean()
         return loss
-    
+
     def AT_pred(self, logits):
         th_logit = logits[:, self.cfg.id_rel_thre].unsqueeze(1)
         output = torch.zeros_like(logits).to(logits)
@@ -91,7 +94,7 @@ class Loss:
         alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
         alpha = alpha / alpha.sum()
         alpha = alpha.unsqueeze(0)
-        
+
         loss = alpha * loss
         loss = loss.sum(-1).mean()
 
@@ -104,8 +107,8 @@ class Loss:
 
     def sigmoidF1_loss(self, logits, labels):
         device = self.cfg.device
-        β = self.cfg.β 
-        η = self.cfg.η 
+        β = self.cfg.β
+        η = self.cfg.η
 
         logits = β * (logits + η)
         sig = torch.sigmoid(logits)
@@ -123,6 +126,47 @@ class Loss:
         alpha = alpha.unsqueeze(0)
 
         return 1.0 - torch.sum(sigmoid_f1 * alpha)
+
+    def softmaxF1_loss_log(self, logits, labels):
+        device = self.cfg.device
+        T = self.cfg.T
+
+        logits = logits / T
+        log_probs = F.log_softmax(logits, dim=-1)
+        probs = torch.exp(log_probs)
+        tp = torch.sum(log_probs * labels, dim=0)
+        fp = torch.sum(log_probs * (1.0 - labels), dim=0)
+        fn = torch.sum(torch.log(1.0 - probs) * labels, dim=0)
+        softmax_f1 = (2 * tp) / (2 * tp + fn + fp + self.cfg.small_positive)
+
+        counts = labels.sum(dim=0)
+        alpha = torch.zeros_like(counts).to(device)
+        nonzero_mask = counts != 0
+        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        alpha = alpha / alpha.sum()
+        alpha = alpha.unsqueeze(0)
+
+        return 1.0 - torch.sum(softmax_f1 * alpha)
+
+    def softmaxF1_loss(self, logits, labels):
+        device = self.cfg.device
+        T = self.cfg.T
+
+        logits = logits / T
+        probs = F.softmax(logits, dim=-1)
+        tp = torch.sum(probs* labels, dim=0)
+        fp = torch.sum(probs * (1.0 - labels), dim=0)
+        fn = torch.sum((1.0 - probs) * labels, dim=0)
+        softmax_f1 = (2 * tp) / (2 * tp + fn + fp + self.cfg.small_positive)
+
+        counts = labels.sum(dim=0)
+        alpha = torch.zeros_like(counts).to(device)
+        nonzero_mask = counts != 0
+        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        alpha = alpha / alpha.sum()
+        alpha = alpha.unsqueeze(0)
+
+        return 1.0 - torch.sum(softmax_f1 * alpha)
 
     def PSD_loss(self, logits, teacher_logits, current_epoch):
         current_temp = self.cfg.upper_temp - (self.cfg.upper_temp - self.cfg.lower_temp) * current_epoch / (self.cfg.num_epoch - 1.0)
@@ -175,7 +219,7 @@ class Loss:
         temp = reps[unique_anchor_idx] # 22, 50
 
         cached = torch.matmul(temp, reps.T)
-        cached = torch.exp(cached / self.cfg.sc_temp) 
+        cached = torch.exp(cached / self.cfg.sc_temp)
         own = cached[torch.arange(len(unique_anchor_idx)), unique_anchor_idx] # 22
         cached = torch.sum(cached, dim=1) - own # 22
 

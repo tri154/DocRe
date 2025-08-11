@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--num_epoch', type=int, default=20)
     parser.add_argument('--train_batch_size', type=int, default=4)
     parser.add_argument('--test_batch_size', type=int, default=4)
-    parser.add_argument('--update_freq', type=int, default=1, help="Gradient accumulation.") 
+    parser.add_argument('--update_freq', type=int, default=1, help="Gradient accumulation.")
     parser.add_argument('--warmup_ratio', type=float, default=0.06, help="Warmup.")
     parser.add_argument("--max_grad_norm", type=float, default=1.0)
     parser.add_argument("--new_lr", type=float, default=1e-4)
@@ -62,9 +62,10 @@ def parse_args():
     parser.add_argument('--focal_gamma', type=float, default=2.5, help="For AT and CE focal loss.")
     parser.add_argument('--β', type=float, default=1, help="For sigmoidF1, =1 for normal sigmoid.")
     parser.add_argument('--η', type=float, default=0, help="For sigmoidF1, =0 for normal sigmoid.")
+    parser.add_argument('--T', type=float, default=1.0, help="For softmaxF1, =1 for normal softmax.")
 
     args = parser.parse_args()
-    
+
     return args
 
 
@@ -83,7 +84,7 @@ class Config:
         self.small_positive = 1e-10
 
         self.marker_entity = '*'
-        
+
         self.dir_curr = os.getcwd()
         self.dir_data = os.path.join(self.dir_curr, '../data')
         self.dir_dataset = os.path.join(self.dir_data, self.dataset)
@@ -113,7 +114,9 @@ class Config:
             self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id.json'), 'r'))
         elif self.re_loss == 'CE':
             self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
-        elif self.re_loss == 'SF1':
+        elif self.re_loss == 'sigmoidF1':
+            self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
+        elif self.re_loss == 'softmaxF1':
             self.data_rel2id = json.load(open(os.path.join(self.dir_dataset_ori, 'rel2id_wo_AT.json'), 'r'))
         else:
             raise Exception("Define loss function.")
@@ -151,7 +154,7 @@ class Config:
 
         self.log_config()
 
-            
+
     def set_seed(self):
         self.logging("=" * 50 + "\n\n\n")
         self.logging(f"Using seed {self.seed}.")
