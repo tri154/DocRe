@@ -37,6 +37,7 @@ class Model(nn.Module):
                                           high_layers=self.cfg.high_layers,
                                           num_bases=self.cfg.num_bases)
             # self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
+            self.ht_extractor = nn.Linear(emb_size*2, emb_size*1)
         elif self.cfg.graph_type == 'rgat':
             self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
             self.ht_extractor = nn.Linear(emb_size*18, emb_size*2)
@@ -46,7 +47,7 @@ class Model(nn.Module):
         self.cnn = CNN(emb_size, device=self.cfg.device)
 
         self.w_h = nn.Sequential(
-            nn.Linear(emb_size * 4, emb_size * 2),
+            nn.Linear(emb_size * 3, emb_size * 2),
             nn.LayerNorm(emb_size * 2),
             nn.Tanh(),
             nn.Dropout(0.1),
@@ -61,7 +62,7 @@ class Model(nn.Module):
         )
 
         self.w_t = nn.Sequential(
-            nn.Linear(emb_size * 4, emb_size * 2),
+            nn.Linear(emb_size * 3, emb_size * 2),
             nn.LayerNorm(emb_size * 2),
             nn.Tanh(),
             nn.Dropout(0.1),
@@ -308,6 +309,8 @@ class Model(nn.Module):
     def compute_graph_features(self, gcn_nodes, head_entities, tail_entities, offsets):
         entity_h = gcn_nodes[head_entities + offsets]
         entity_t = gcn_nodes[tail_entities + offsets]
+        entity_h = self.ht_extractor(entity_h)
+        entity_t = self.ht_extractor(entity_t)
         # entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
         # return entity_ht
         return entity_h, entity_t
@@ -424,7 +427,7 @@ class Model(nn.Module):
         h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
         t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
         h_rep = self.w_h(h_rep)
-        t_rep = self.w_t(t_rep) # 14, 256
+        t_rep = self.w_t(t_rep)
         # relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
 
 
