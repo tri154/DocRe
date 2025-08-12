@@ -23,10 +23,10 @@ class Model(nn.Module):
             self.hidden_dim = 768 #NOTE: change if transformer changes.
         elif "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract" == cfg.transformer:
             self.hidden_dim = 768
-        
+
         self.num_node_types = 3
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
-       
+
         if self.cfg.graph_type == 'rgcn':
             self.graph_model = CustomRGCN(emb_size,
                                           emb_size,
@@ -36,17 +36,17 @@ class Model(nn.Module):
                                           low_layers=self.cfg.low_layers,
                                           high_layers=self.cfg.high_layers,
                                           num_bases=self.cfg.num_bases)
-            self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
+            # self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
         elif self.cfg.graph_type == 'rgat':
             self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
-            self.ht_extractor = nn.Linear(emb_size*18, emb_size*2) 
+            self.ht_extractor = nn.Linear(emb_size*18, emb_size*2)
         else:
             raise Exception("Define graph model.")
 
         self.cnn = CNN(emb_size, device=self.cfg.device)
 
-        self.MIP_Linear = nn.Sequential(
-            nn.Linear(emb_size * 5, emb_size * 2),
+        self.w_h = nn.Sequential(
+            nn.Linear(emb_size * 4, emb_size * 2),
             nn.LayerNorm(emb_size * 2),
             nn.Tanh(),
             nn.Dropout(0.1),
@@ -59,10 +59,41 @@ class Model(nn.Module):
             nn.LayerNorm(emb_size // 2),
             torch.nn.Tanh(),
         )
-        # self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
-        self.bilinear = nn.Sequential(
-            nn.Linear(emb_size // 2, self.cfg.num_rel),
+
+        self.w_t = nn.Sequential(
+            nn.Linear(emb_size * 4, emb_size * 2),
+            nn.LayerNorm(emb_size * 2),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+
+            nn.Linear(emb_size * 2, emb_size),
+            nn.LayerNorm(emb_size),
+            torch.nn.Tanh(),
+
+            nn.Linear(emb_size, emb_size // 2),
+            nn.LayerNorm(emb_size // 2),
+            torch.nn.Tanh(),
         )
+
+        # self.MIP_Linear = nn.Sequential(
+        #     nn.Linear(emb_size * 5, emb_size * 2),
+        #     nn.LayerNorm(emb_size * 2),
+        #     nn.Tanh(),
+        #     nn.Dropout(0.1),
+
+        #     nn.Linear(emb_size * 2, emb_size),
+        #     nn.LayerNorm(emb_size),
+        #     torch.nn.Tanh(),
+
+        #     nn.Linear(emb_size, emb_size // 2),
+        #     nn.LayerNorm(emb_size // 2),
+        #     torch.nn.Tanh(),
+        # )
+        # self.bilinear = nn.Sequential(
+        #     nn.Linear(emb_size // 2, self.cfg.num_rel),
+        # )
+
+        self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
 
         self.loss = Loss(cfg)
 
@@ -82,7 +113,7 @@ class Model(nn.Module):
         batch_mention_pos = batch_start_mpos[batch_start_mpos != -1].flatten()
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_mention_per_doc).to(self.cfg.device)
         batch_mention_embs = batch_token_embs[batch_did, batch_mention_pos]
-        
+
         return batch_mention_embs
 
     def compute_sentence_embs(self, batch_token_embs, batch_token_atts, batch_sent_pos):
@@ -195,7 +226,7 @@ class Model(nn.Module):
         res = set()
         for node in torch.arange(num_entity_node):
             src = node.item()
-            res = self.bfs(adj, src, dist, num_entity_node) | res 
+            res = self.bfs(adj, src, dist, num_entity_node) | res
         res = torch.tensor(list(res)).to(device)
         res = res.T
         res = to_undirected(res) # possible already in undirected format.
@@ -229,7 +260,7 @@ class Model(nn.Module):
         end = torch.cat(end, dim=-1).to(device)
         res = torch.stack([start, end]).to(device)
         return res
-        
+
 
     def get_relation_map(self, gcn_nodes, num_entity_per_doc):
         device = self.cfg.device
@@ -271,15 +302,16 @@ class Model(nn.Module):
         head_entities = torch.tensor(head_entities).to(device)
         tail_entities = torch.tensor(tail_entities).to(device)
         batch_labels = torch.stack(batch_labels).to(device)
-        
+
         return head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc # reuse
-        
+
     def compute_graph_features(self, gcn_nodes, head_entities, tail_entities, offsets):
         entity_h = gcn_nodes[head_entities + offsets]
         entity_t = gcn_nodes[tail_entities + offsets]
-        entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
-        return entity_ht
-        
+        # entity_ht = self.ht_extractor(torch.cat([entity_h, entity_t], dim=-1)) # 14, 1024
+        # return entity_ht
+        return entity_h, entity_t
+
     def compute_cnn_features(self, relation_map, head_entities, tail_entities, num_rel_per_doc):
         device = self.cfg.device
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).to(device)
@@ -310,8 +342,11 @@ class Model(nn.Module):
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).unsqueeze(-1).to(device)
         pair_entities = torch.stack([head_entities, tail_entities], dim=-1)
         e_tw = batch_entity_att[batch_did, pair_entities]
-        e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
-        return e_tw
+        # e_tw = e_tw.reshape(len(e_tw), -1) # 14, 1024
+        # return e_tw
+        e_t = e_tw[:, 0, :]
+        e_w = e_tw[:, 1, :]
+        return e_t, e_w
 
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_titles = batch_input['batch_titles']
@@ -332,7 +367,7 @@ class Model(nn.Module):
         num_mention_per_doc = batch_input['num_mention_per_doc']
         num_mention_per_entity = batch_input['num_mention_per_entity']
         num_sent_per_doc = batch_input['num_sent_per_doc']
-        
+
         self.cur_batch_size = len(batch_token_seqs)
 
         batch_token_embs, batch_token_atts = self.transformer(batch_token_seqs, batch_token_masks, batch_token_types)
@@ -346,7 +381,7 @@ class Model(nn.Module):
                                                                           batch_sent_pos,
                                                                           num_entity_per_doc,
                                                                           num_mention_per_doc)
-    
+
         #nodes order:
         # doc1_e1, doc1_e2 ... doc1_en, doc2_e1, ...
         # doc1_e1_mention_1, doc1_e1_mention2, ...
@@ -373,12 +408,10 @@ class Model(nn.Module):
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
-        graph_feat = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
-        # graph_feat: (en1, en2)
+        graph_feat_h, graph_feat_t = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
         cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
-        # cnn_feat: en12
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
-        att_feat = self.compute_att_features(batch_token_embs,
+        att_feat_h, att_feat_t = self.compute_att_features(batch_token_embs,
                                              batch_token_atts,
                                              batch_start_mpos,
                                              head_entities,
@@ -387,25 +420,27 @@ class Model(nn.Module):
                                              num_mention_per_entity,
                                              num_rel_per_doc,
                                              batch_titles)
-        # att_feat: (en1, en2)
-        
-        relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
+
+        h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
+        t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
+        h_rep = self.w_h(h_rep)
+        t_rep = self.w_t(t_rep) # 14, 256
+        # relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
+
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
-            sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
+            raise Exception("Need to re-define")
+            # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
-        relation_rep = self.MIP_Linear(relation_rep)
-        # ==================================
+        # relation_rep = self.MIP_Linear(relation_rep)
+        # logits = self.bilinear(relation_rep)
 
-
-        
-        # ==================================
-        logits = self.bilinear(relation_rep)
+        logits = self.bilinear(h_rep, t_rep)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
-            
+
         re_loss = self.loss.cal_loss(logits, batch_labels)
 
         kd_loss = torch.tensor(0.0)
@@ -415,4 +450,3 @@ class Model(nn.Module):
 
         loss = re_loss + current_tradeoff * kd_loss  + self.cfg.sc_weight * sc_loss
         return loss, torch.split(logits.detach().cpu(), num_rel_per_doc.tolist())
-        
