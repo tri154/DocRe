@@ -39,12 +39,12 @@ USE_SC=False
 SC_TEMP=0.16096448806072833
 SC_WEIGHT=0.1509642367395748
 
-RE_LOSS="sigmoidF1" # AT, CE, sigmoidF1, softmaxF1
+RE_LOSS="CE" # AT, CE, sigmoidF1, softmaxF1
 FOCAL_GAMMA=2.5
 BETA=1.0
 ETA=0.0
 T=1.0
-PENALTY_WEIGHT=0.1
+PENALTY_WEIGHT=0.01
 
 python main.py \
   --dataset $DATASET \

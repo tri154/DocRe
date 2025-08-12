@@ -12,7 +12,8 @@ class Loss:
             self.cal_loss = self.AT_focal_loss
             self.predict = self.AT_pred
         elif self.cfg.re_loss == 'CE':
-            self.cal_loss = self.CE_focal_loss
+            # self.cal_loss = self.CE_focal_loss
+            self.cal_loss = self.CE_focal_regularization
             self.predict = self.CE_pred
         elif self.cfg.re_loss == 'sigmoidF1':
             self.cal_loss = self.sigmoidF1_loss
@@ -152,6 +153,33 @@ class Loss:
 
         loss = 1.0 - torch.sum(softmax_f1 * alpha) + penalty_weight * torch.sum(penalty * alpha)
         return loss
+
+    def CE_focal_regularization(self, logits, labels):
+        penalty_weight = self.cfg.penalty_weight
+        device = self.cfg.device
+
+        log_probs = F.log_softmax(logits, dim=-1)
+        probs = torch.softmax(logits, dim=-1)
+
+        fp = torch.sum(probs * (1.0 - labels), dim=0)
+        fn = torch.sum((1.0 - probs) * labels, dim=0)
+        penalty = F.l1_loss(fp, fn, reduction='none')
+
+        ce_loss = - torch.pow(1.0 - probs, self.cfg.focal_gamma) * log_probs * labels
+
+        counts = labels.sum(dim=0)
+        alpha = torch.zeros_like(counts).to(device)
+        nonzero_mask = counts != 0
+        alpha[nonzero_mask] = 1.0 / counts[nonzero_mask]
+        alpha = alpha / alpha.sum()
+        alpha = alpha.unsqueeze(0)
+
+        ce_loss = torch.sum(alpha * ce_loss, dim=-1).mean()
+        penalty = torch.sum(alpha * penalty)
+
+        final_loss = ce_loss + penalty_weight * penalty
+
+        return final_loss
 
     def PSD_loss(self, logits, teacher_logits, current_epoch):
         current_temp = self.cfg.upper_temp - (self.cfg.upper_temp - self.cfg.lower_temp) * current_epoch / (self.cfg.num_epoch - 1.0)
