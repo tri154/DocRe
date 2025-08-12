@@ -163,7 +163,7 @@ class Loss:
 
         fp = torch.sum(probs * (1.0 - labels), dim=0)
         fn = torch.sum((1.0 - probs) * labels, dim=0)
-        penalty = F.l1_loss(fp, 2.0 * fn, reduction='none')
+        penalty = F.l1_loss(fp, fn, reduction='none')
 
         ce_loss = - torch.pow(1.0 - probs, self.cfg.focal_gamma) * log_probs * labels
 
