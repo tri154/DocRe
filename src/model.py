@@ -59,6 +59,7 @@ class Model(nn.Module):
             nn.LayerNorm(emb_size // 2),
             torch.nn.Tanh(),
         )
+        # self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
         self.bilinear = nn.Sequential(
             nn.Linear(emb_size // 2, self.cfg.num_rel),
         )
@@ -365,7 +366,6 @@ class Model(nn.Module):
                 ent_ent_links,
                 ent_sent_links]
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
-        # ============================
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
@@ -374,7 +374,9 @@ class Model(nn.Module):
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
         graph_feat = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
+        # graph_feat: (en1, en2)
         cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
+        # cnn_feat: en12
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
         att_feat = self.compute_att_features(batch_token_embs,
                                              batch_token_atts,
@@ -385,16 +387,20 @@ class Model(nn.Module):
                                              num_mention_per_entity,
                                              num_rel_per_doc,
                                              batch_titles)
+        # att_feat: (en1, en2)
         
         relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
-        # relation_rep = torch.cat([graph_feat, att_feat], dim=-1)
 
-        # ============================
         sc_loss = 0
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         relation_rep = self.MIP_Linear(relation_rep)
+        # ==================================
+
+
+        
+        # ==================================
         logits = self.bilinear(relation_rep)
 
         if not is_training:
