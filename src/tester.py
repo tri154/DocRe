@@ -1,6 +1,6 @@
 import torch
 import math
-import torch.nn.functional as F 
+import torch.nn.functional as F
 import torch.nn.utils.rnn as rnn
 import numpy as np
 
@@ -19,7 +19,7 @@ class Tester:
             raise Exception("Define your F1 cal.")
 
     def prepare_batch(self, batch_size, dataset='dev'):
-        inputs = self.test_set if dataset == 'test' else self.dev_set 
+        inputs = self.test_set if dataset == 'test' else self.dev_set
 
         num_batch = math.ceil(len(inputs) / batch_size)
         device = self.cfg.device
@@ -41,7 +41,7 @@ class Tester:
             batch_mentions_link = list()
             batch_ents_link = list()
             batch_teacher_logits = list()
-  
+
             for doc_input in batch_inputs:
                 batch_titles.append(doc_input['doc_title'])
                 batch_token_seqs.append(doc_input['doc_tokens'])
@@ -107,7 +107,7 @@ class Tester:
                     'batch_epair_rels': batch_epair_rels,
                     'batch_sent_pos': batch_sent_pos,
                     'batch_eid2sid': batch_eid2sid,
-                    'num_sent_per_doc': num_sent_per_doc.cpu(), 
+                    'num_sent_per_doc': num_sent_per_doc.cpu(),
                     'num_entity_per_doc': num_entity_per_doc.cpu(),
                     'num_mention_per_doc': num_mention_per_doc.cpu(),
                     'num_mentlink_per_doc': num_mentlink_per_doc.cpu(),
@@ -138,27 +138,27 @@ class Tester:
     def cal_f1_overall(self, preds, labels, epsilon=1e-8):
         preds = torch.argmax(preds, dim=1).to(dtype=torch.int)
         labels = torch.argmax(labels, dim=1).to(dtype=torch.int)
-    
+
         total_tp, total_fp, total_fn = 0, 0, 0
-    
+
         for cls in range(self.cfg.num_rel):
-            if cls == self.cfg.id_rel_thre:
+            if self.cfg.re_loss == 'AT' and cls == self.cfg.id_rel_thre:
                 continue  # Bỏ qua nhãn 0
-    
+
             tp = ((preds == cls) & (labels == cls)).sum().item()
             fp = ((preds == cls) & (labels != cls)).sum().item()
             fn = ((preds != cls) & (labels == cls)).sum().item()
-    
+
             total_tp += tp
             total_fp += fp
             total_fn += fn
-    
+
         precision = total_tp / (total_tp + total_fp + epsilon)
         recall = total_tp / (total_tp + total_fn + epsilon)
         f1 = 2 * precision * recall / (precision + recall + epsilon)
-    
+
         return total_tp, total_fp, total_fn, precision, recall, f1
-        
+
     def test(self, model, dataset='dev'):
         model.eval()
         all_preds = list()
