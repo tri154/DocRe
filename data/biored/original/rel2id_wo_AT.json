@@ -1,0 +1,10 @@
+{
+    "Association": 0,
+    "Positive_Correlation": 1,
+    "Negative_Correlation": 2,
+    "Bind": 3,
+    "Drug_Interaction": 4,
+    "Cotreatment": 5,
+    "Comparison": 6,
+    "Conversion": 7
+}
