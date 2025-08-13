@@ -49,6 +49,9 @@ def parse_args():
     parser.add_argument('--low_layers', type=int, default=1, help='min = 1')
     parser.add_argument('--high_layers', type=int, default=2, help='min = 1')
 
+    parser.add_argument('--use_moe', type=str2bool, default=True)
+    parser.add_argument('--num_experts', type=int, default=4)
+
     parser.add_argument('--use_psd', type=str2bool, default=True)
     parser.add_argument('--lower_temp', type=float, default=2.0)
     parser.add_argument('--upper_temp', type=float, default=20.0)

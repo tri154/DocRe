@@ -29,6 +29,9 @@ TYPE_DIM=20
 LOW_LAYERS=1
 HIGH_LAYERS=2
 
+USE_MOE=True
+NUM_EXPERTS=4
+
 USE_PSD=False
 LOWER_TEMP=2.0
 UPPER_TEMP=20.0
@@ -41,10 +44,10 @@ SC_WEIGHT=0.1509642367395748
 
 RE_LOSS="CE" # AT, CE, sigmoidF1, softmaxF1
 FOCAL_GAMMA=2.5
-BETA=1.0
-ETA=0.0
-T=1.0
 PENALTY_WEIGHT=0.01
+# BETA=1.0
+# ETA=0.0
+# T=1.0
 
 python main.py \
   --dataset $DATASET \
@@ -69,6 +72,8 @@ python main.py \
   --type_dim $TYPE_DIM \
   --low_layers $LOW_LAYERS \
   --high_layers $HIGH_LAYERS \
+  --use_moe $USE_MOE \
+  --num_experts $NUM_EXPERTS \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \
@@ -78,7 +83,9 @@ python main.py \
   --sc_weight $SC_WEIGHT \
   --focal_gamma $FOCAL_GAMMA \
   --re_loss $RE_LOSS \
-  --β $BETA \
-  --η $ETA \
-  --T $T \
   --penalty_weight $PENALTY_WEIGHT
+
+
+  # --β $BETA \
+  # --η $ETA \
+  # --T $T \

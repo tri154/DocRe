@@ -9,6 +9,7 @@ from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.rgat import RGAT
 from models.cnn import CNN
+from models.moe import MixtureOfExperts
 from loss import Loss
 
 class Model(nn.Module):
@@ -36,7 +37,6 @@ class Model(nn.Module):
                                           low_layers=self.cfg.low_layers,
                                           high_layers=self.cfg.high_layers,
                                           num_bases=self.cfg.num_bases)
-            # self.ht_extractor = nn.Linear(emb_size*4, emb_size*2)
             self.ht_extractor = nn.Linear(emb_size*2, emb_size*1)
         elif self.cfg.graph_type == 'rgat':
             self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
@@ -76,25 +76,10 @@ class Model(nn.Module):
             torch.nn.Tanh(),
         )
 
-        # self.MIP_Linear = nn.Sequential(
-        #     nn.Linear(emb_size * 5, emb_size * 2),
-        #     nn.LayerNorm(emb_size * 2),
-        #     nn.Tanh(),
-        #     nn.Dropout(0.1),
-
-        #     nn.Linear(emb_size * 2, emb_size),
-        #     nn.LayerNorm(emb_size),
-        #     torch.nn.Tanh(),
-
-        #     nn.Linear(emb_size, emb_size // 2),
-        #     nn.LayerNorm(emb_size // 2),
-        #     torch.nn.Tanh(),
-        # )
-        # self.bilinear = nn.Sequential(
-        #     nn.Linear(emb_size // 2, self.cfg.num_rel),
-        # )
-
-        self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
+        if self.cfg.use_moe:
+            self.bilinear = MixtureOfExperts(self.cfg.num_experts, emb_size // 2, emb_size // 2, self.cfg.num_rel)
+        else:
+            self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
 
         self.loss = Loss(cfg)
 
@@ -435,9 +420,6 @@ class Model(nn.Module):
         if is_training and self.cfg.use_sc:
             raise Exception("Need to re-define")
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
-
-        # relation_rep = self.MIP_Linear(relation_rep)
-        # logits = self.bilinear(relation_rep)
 
         logits = self.bilinear(h_rep, t_rep)
 
