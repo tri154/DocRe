@@ -15,10 +15,11 @@ class Expert(nn.Module):
 
 class MixtureOfExperts(nn.Module):
 
-    def __init__(self, cfg, num_experts, in1_features, in2_features, out_features):
+    def __init__(self, cfg, num_experts, noise_scale, in1_features, in2_features, out_features):
         super().__init__()
         self.cfg = cfg
         self.num_experts = num_experts
+        self.noise_scale = noise_scale
         self.more_logging = False
 
         self.stats = torch.zeros(num_experts)
@@ -35,10 +36,15 @@ class MixtureOfExperts(nn.Module):
         self.more_logging = value
 
     def forward(self, h_rep, t_rep):
-        expert_out = torch.stack([expert(h_rep, t_rep) for expert in self.experts], dim=1) # num_rel, 4, 2
+        expert_out = torch.stack([expert(h_rep, t_rep) for expert in self.experts], dim=1)
 
         gate_logits = self.gate(h_rep, t_rep)
-        gate_out = F.softmax(gate_logits, dim=1) # 14 ,4
+        noise = torch.rand_like(gate_logits) * self.noise_scale
+        # noise = (torch.rand_like(gate_logits) - 0.5) * 2 * self.noise_scale
+        gate_out = F.softmax(gate_logits, dim=1)
+        gate_out = gate_out + noise
+        gate_out = gate_out / gate_out.sum(dim=-1, keepdim=True)
+
 
         if self.more_logging:
             self.cfg.logging(f"{gate_out} ")

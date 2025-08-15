@@ -77,7 +77,9 @@ class Model(nn.Module):
         )
 
         if self.cfg.use_moe:
-            self.bilinear = MixtureOfExperts(self.cfg, self.cfg.num_experts, emb_size // 2, emb_size // 2, self.cfg.num_rel)
+            self.bilinear = MixtureOfExperts(self.cfg,
+                                             self.cfg.num_experts, self.cfg.noise_scale,
+                                             emb_size // 2, emb_size // 2, self.cfg.num_rel)
         else:
             self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
 
