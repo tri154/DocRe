@@ -68,7 +68,7 @@ class Trainer:
             batch_mentions_link = list()
             batch_ents_link = list()
             batch_teacher_logits = list()
-  
+
             for doc_input in batch_inputs:
                 batch_titles.append(doc_input['doc_title'])
                 batch_token_seqs.append(doc_input['doc_tokens'])
@@ -134,7 +134,7 @@ class Trainer:
                     'batch_epair_rels': batch_epair_rels,
                     'batch_sent_pos': batch_sent_pos,
                     'batch_eid2sid': batch_eid2sid,
-                    'num_sent_per_doc': num_sent_per_doc.cpu(), 
+                    'num_sent_per_doc': num_sent_per_doc.cpu(),
                     'num_entity_per_doc': num_entity_per_doc.cpu(),
                     'num_mention_per_doc': num_mention_per_doc.cpu(),
                     'num_mentlink_per_doc': num_mentlink_per_doc.cpu(),
@@ -152,7 +152,10 @@ class Trainer:
 
     def debug(self):
         for batch_input in self.prepare_batch(self.cfg.train_batch_size):
+            self.model.bilinear.reset_stats()
             loss, _ = self.model(batch_input, is_training=True)
+            print(f"Stats: {self.model.bilinear.stats} ")
+            self.cfg.logging(f"Stats: {self.model.bilinear.stats} ")
             print(loss)
             # preds, labels = self.model(batch_input, is_training=False)
             # print(preds)
@@ -197,12 +200,18 @@ class Trainer:
             print(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
             self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
 
+            self.model.bilinear.reset_stats()
             epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
+            print(f"Stats train: {self.model.bilinear.stats} ")
+            self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ")
 
+            self.model.bilinear.reset_stats()
             d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
+            print(f"Stats dev: {self.model.bilinear.stats} ")
             print(f"epoch: {idx_epoch}, Dev result: loss={epoch_loss:5f}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
+            self.cfg.logging(f"Stats dev: {self.model.bilinear.stats} ")
             self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
-            
+
             if d_f1 > self.best_f1_dev:
                 self.best_f1_dev = d_f1
                 torch.save(self.model.state_dict(), self.cfg.save_path)
@@ -213,12 +222,15 @@ class Trainer:
                     print("Early stopping triggered.")
                     self.cfg.logging("Early stopping triggered.")
                     break
-                    
+
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
+        self.model.bilinear.reset_stats()
         t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
+        print(f"Stats test: {self.model.bilinear.stats} ")
         print(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
+        self.cfg.logging(f"Stats test: {self.model.bilinear.stats} ")
         self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
 
         return self.best_f1_dev

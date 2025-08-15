@@ -413,7 +413,6 @@ class Model(nn.Module):
         t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
         h_rep = self.w_h(h_rep)
         t_rep = self.w_t(t_rep)
-        # relation_rep = torch.cat([cnn_feat, att_feat, graph_feat], dim=-1)
 
 
         sc_loss = 0
