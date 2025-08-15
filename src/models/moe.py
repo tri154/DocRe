@@ -36,7 +36,7 @@ class MixtureOfExperts(nn.Module):
         gate_out = F.softmax(gate_logits, dim=1) # 14 ,4
 
         temp = F.one_hot(torch.argmax(gate_out.detach(), dim=-1), num_classes=gate_out.shape[-1]).int()
-        self.stats = self.stats + temp.sum(dim=0)
+        self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
         out = torch.bmm(gate_out.unsqueeze(1), expert_out).squeeze(1)
         return out
