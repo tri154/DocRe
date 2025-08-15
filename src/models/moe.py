@@ -15,9 +15,10 @@ class Expert(nn.Module):
 
 class MixtureOfExperts(nn.Module):
 
-    def __init__(self, num_experts, in1_features, in2_features, out_features):
+    def __init__(self, cfg, num_experts, in1_features, in2_features, out_features):
         super().__init__()
         self.num_experts = num_experts
+        self.more_logging = False
 
         self.stats = torch.zeros(num_experts)
         self.experts = nn.ModuleList([
@@ -29,12 +30,17 @@ class MixtureOfExperts(nn.Module):
     def reset_stats(self):
         self.stats = torch.zeros(self.num_experts)
 
+    def set_more_logging(self, value):
+        self.more_logging = value
+
     def forward(self, h_rep, t_rep):
         expert_out = torch.stack([expert(h_rep, t_rep) for expert in self.experts], dim=1) # num_rel, 4, 2
 
         gate_logits = self.gate(h_rep, t_rep)
         gate_out = F.softmax(gate_logits, dim=1) # 14 ,4
 
+        if self.more_logging:
+            self.cfg.logging(f"{gate_out} ")
         temp = F.one_hot(torch.argmax(gate_out.detach(), dim=-1), num_classes=gate_out.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
