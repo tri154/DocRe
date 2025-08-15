@@ -17,6 +17,7 @@ class MixtureOfExperts(nn.Module):
 
     def __init__(self, cfg, num_experts, in1_features, in2_features, out_features):
         super().__init__()
+        self.cfg = cfg
         self.num_experts = num_experts
         self.more_logging = False
 
