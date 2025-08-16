@@ -28,6 +28,11 @@ class MixtureOfExperts(nn.Module):
         ])
 
         self.gate = nn.Bilinear(in1_features, in2_features, num_experts)
+        self.noise = nn.Bilinear(in1_features, in2_features, num_experts)
+        nn.init.zeros_(self.gate.weight)
+        nn.init.zeros_(self.gate.bias)
+        nn.init.zeros_(self.noise.weight)
+        nn.init.zeros_(self.noise.bias)
 
     def reset_stats(self):
         self.stats = torch.zeros(self.num_experts)
@@ -36,15 +41,22 @@ class MixtureOfExperts(nn.Module):
         self.more_logging = value
 
     def forward(self, h_rep, t_rep):
+        device = h_rep.device
         expert_out = torch.stack([expert(h_rep, t_rep) for expert in self.experts], dim=1)
 
+        # normal noise
         gate_logits = self.gate(h_rep, t_rep)
-        noise = torch.rand_like(gate_logits) * self.noise_scale
-        # noise = (torch.rand_like(gate_logits) - 0.5) * 2 * self.noise_scale
-        gate_out = F.softmax(gate_logits, dim=1)
-        gate_out = gate_out + noise
-        gate_out = gate_out / gate_out.sum(dim=-1, keepdim=True)
+        noise_logits = torch.randn(gate_logits.shape).to(device) * F.softplus(self.noise(h_rep, t_rep))
+        gate_logits = gate_logits + noise_logits
 
+        gate_out = F.softmax(gate_logits, dim=1)
+
+        # uniform noise
+        # noise = torch.rand_like(gate_logits) * self.noise_scale
+        # noise = (torch.rand_like(gate_logits) - 0.5) * 2 * self.noise_scale
+        # gate_out = F.softmax(gate_logits, dim=1)
+        # gate_out = gate_out + noise
+        # gate_out = gate_out / gate_out.sum(dim=-1, keepdim=True)
 
         if self.more_logging:
             self.cfg.logging(f"{gate_out} ")
@@ -52,4 +64,4 @@ class MixtureOfExperts(nn.Module):
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
         out = torch.bmm(gate_out.unsqueeze(1), expert_out).squeeze(1)
-        return out
+        return out, gate_out

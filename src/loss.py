@@ -24,6 +24,16 @@ class Loss:
         else:
             raise Exception("Define loss function.")
 
+    def importance_loss(self, gate_out):
+        importance = gate_out.sum(dim=0)
+        std = torch.std(importance)
+        mean = torch.mean(importance)
+        coefvar = std / mean
+
+        assert torch.isfinite(coefvar).all(), "Coefficient of variation has NaN or Inf"
+
+        # coefvar = coefvar ** 2
+        return coefvar
 
 
     def AT_loss_original(self, logits, labels):

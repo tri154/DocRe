@@ -51,7 +51,8 @@ def parse_args():
 
     parser.add_argument('--use_moe', type=str2bool, default=True)
     parser.add_argument('--num_experts', type=int, default=4)
-    parser.add_argument('--noise_scale', type=float, default=1.0)
+    parser.add_argument('--noise_scale', type=float, default=0.5, help="for uniform noise.")
+    parser.add_argument('--importance_weight', type=float, default=1.0, help="for normal noise.")
 
     parser.add_argument('--use_psd', type=str2bool, default=True)
     parser.add_argument('--lower_temp', type=float, default=2.0)
@@ -63,11 +64,11 @@ def parse_args():
     parser.add_argument('--sc_weight', type=float, default=1.0)
 
     parser.add_argument('--re_loss', type=str, default='AT')
-    parser.add_argument('--focal_gamma', type=float, default=2.5, help="For AT and CE focal loss.")
-    parser.add_argument('--β', type=float, default=1, help="For sigmoidF1, =1 for normal sigmoid.")
-    parser.add_argument('--η', type=float, default=0, help="For sigmoidF1, =0 for normal sigmoid.")
-    parser.add_argument('--T', type=float, default=1.0, help="For softmaxF1, =1 for normal softmax.")
-    parser.add_argument('--penalty_weight', default=1.0, type=float, help="For regularization, sigmoidF1, softmaxF1.")
+    parser.add_argument('--focal_gamma', type=float, default=2.5, help="for AT and CE focal loss.")
+    parser.add_argument('--β', type=float, default=1, help="for sigmoidF1, =1 for normal sigmoid.")
+    parser.add_argument('--η', type=float, default=0, help="for sigmoidF1, =0 for normal sigmoid.")
+    parser.add_argument('--T', type=float, default=1.0, help="for softmaxF1, =1 for normal softmax.")
+    parser.add_argument('--penalty_weight', default=1.0, type=float, help="for regularization, sigmoidF1, softmaxF1.")
 
     args = parser.parse_args()
 

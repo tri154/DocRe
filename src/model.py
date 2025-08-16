@@ -338,6 +338,11 @@ class Model(nn.Module):
         e_w = e_tw[:, 1, :]
         return e_t, e_w
 
+    #nodes order:
+    # doc1_e1, doc1_e2 ... doc1_en, doc2_e1, ...
+    # doc1_e1_mention_1, doc1_e1_mention2, ...
+    # doc1_sent1, doc1_sent2, ...
+
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_titles = batch_input['batch_titles']
         batch_token_seqs = batch_input['batch_token_seqs']
@@ -372,11 +377,6 @@ class Model(nn.Module):
                                                                           num_entity_per_doc,
                                                                           num_mention_per_doc)
 
-        #nodes order:
-        # doc1_e1, doc1_e2 ... doc1_en, doc2_e1, ...
-        # doc1_e1_mention_1, doc1_e1_mention2, ...
-        # doc1_sent1, doc1_sent2, ...
-
         ent_ment_links = self.get_entity_mention_link(num_mention_per_entity, num_per_type) # TODO: move links to preprocessing for performance.
         sent_sent_links = self.get_sentence_sentence_link(num_sent_per_doc, num_per_type)
         ment_sent_links = self.get_ment_sent_link(batch_mpos2sid, num_sent_per_doc, num_mention_per_doc, num_per_type)
@@ -402,37 +402,40 @@ class Model(nn.Module):
         cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
         att_feat_h, att_feat_t = self.compute_att_features(batch_token_embs,
-                                             batch_token_atts,
-                                             batch_start_mpos,
-                                             head_entities,
-                                             tail_entities,
-                                             num_entity_per_doc,
-                                             num_mention_per_entity,
-                                             num_rel_per_doc,
-                                             batch_titles)
+                                                           batch_token_atts,
+                                                           batch_start_mpos,
+                                                           head_entities,
+                                                           tail_entities,
+                                                           num_entity_per_doc,
+                                                           num_mention_per_entity,
+                                                           num_rel_per_doc,
+                                                           batch_titles)
 
         h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
         t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
         h_rep = self.w_h(h_rep)
         t_rep = self.w_t(t_rep)
 
-
         sc_loss = 0
         if is_training and self.cfg.use_sc:
             raise Exception("Need to re-define")
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
-        logits = self.bilinear(h_rep, t_rep)
+        logits, gate_out = self.bilinear(h_rep, t_rep)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
 
         re_loss = self.loss.cal_loss(logits, batch_labels)
+        importance_loss = self.loss.importance_loss(gate_out)
 
         kd_loss = torch.tensor(0.0)
         current_tradeoff = 0.0
         if batch_teacher_logits is not None:
             kd_loss, current_tradeoff = self.loss.PSD_loss(logits, batch_teacher_logits, current_epoch)
 
-        loss = re_loss + current_tradeoff * kd_loss  + self.cfg.sc_weight * sc_loss
+        loss = re_loss + current_tradeoff * kd_loss
+        loss += self.cfg.importance_weight * importance_loss
+        loss += self.cfg.sc_weight * sc_loss
+
         return loss, torch.split(logits.detach().cpu(), num_rel_per_doc.tolist())

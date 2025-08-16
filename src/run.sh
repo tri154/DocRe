@@ -31,7 +31,8 @@ HIGH_LAYERS=2
 
 USE_MOE=True
 NUM_EXPERTS=4
-NOISE_SCALE=1.0
+NOISE_SCALE=0.5
+IMPORTANCE_WEIGHT=1.0
 
 USE_PSD=False
 LOWER_TEMP=2.0
@@ -76,6 +77,7 @@ python main.py \
   --use_moe $USE_MOE \
   --num_experts $NUM_EXPERTS \
   --noise_scale $NOISE_SCALE \
+  --importance_weight $IMPORTANCE_WEIGHT \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \
