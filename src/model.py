@@ -416,7 +416,7 @@ class Model(nn.Module):
         h_rep = self.w_h(h_rep)
         t_rep = self.w_t(t_rep)
 
-        sc_loss = 0
+        sc_loss = 0.0
         if is_training and self.cfg.use_sc:
             raise Exception("Need to re-define")
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
@@ -427,10 +427,12 @@ class Model(nn.Module):
             return self.loss.predict(logits), batch_labels
 
         re_loss = self.loss.cal_loss(logits, batch_labels)
-        importance_loss = self.loss.importance_loss(gate_out)
 
-        kd_loss = torch.tensor(0.0)
-        current_tradeoff = 0.0
+        importance_loss = 0.0
+        if self.cfg.use_importance_loss:
+            importance_loss = self.loss.importance_loss(gate_out)
+
+        kd_loss, current_tradeoff = 0.0, 0.0
         if batch_teacher_logits is not None:
             kd_loss, current_tradeoff = self.loss.PSD_loss(logits, batch_teacher_logits, current_epoch)
 
