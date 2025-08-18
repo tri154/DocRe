@@ -97,7 +97,7 @@ class MoeSparse(nn.Module):
         noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
         gate_logits = gate_logits + noise_logits
 
-        gate_probs = F.softmax(gate_logits)
+        gate_probs = F.softmax(gate_logits, dim=-1)
         top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
         top_logits = top_logits / top_logits.sum(dim=-1, keepdim=True)
 
