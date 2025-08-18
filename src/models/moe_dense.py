@@ -13,7 +13,8 @@ class Expert(nn.Module):
         return output
 
 
-class MixtureOfExperts(nn.Module):
+class MoeDense(nn.Module):
+    # TODO: remove uniform noise if normal noise works well
 
     def __init__(self, cfg, num_experts, noise_scale, in1_features, in2_features, out_features):
         super().__init__()
@@ -33,6 +34,7 @@ class MixtureOfExperts(nn.Module):
         nn.init.zeros_(self.gate.bias)
         nn.init.zeros_(self.noise.weight)
         nn.init.zeros_(self.noise.bias)
+
 
     def reset_stats(self):
         self.stats = torch.zeros(self.num_experts)

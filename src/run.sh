@@ -30,10 +30,12 @@ LOW_LAYERS=1
 HIGH_LAYERS=2
 
 USE_MOE=True
+MOE_TYPE="sparse"
+SPARSE_TOPK=1
 NUM_EXPERTS=4
 NOISE_SCALE=0.5
 USE_IMPORTANCE_LOSS=True
-IMPORTANCE_WEIGHT=1.0
+IMPORTANCE_WEIGHT=0.1
 
 USE_PSD=False
 LOWER_TEMP=2.0
@@ -76,6 +78,8 @@ python main.py \
   --low_layers $LOW_LAYERS \
   --high_layers $HIGH_LAYERS \
   --use_moe $USE_MOE \
+  --sparse_topk $SPARSE_TOPK \
+  --moe_type $MOE_TYPE \
   --num_experts $NUM_EXPERTS \
   --noise_scale $NOISE_SCALE \
   --use_importance_loss $USE_IMPORTANCE_LOSS \

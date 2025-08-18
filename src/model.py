@@ -9,7 +9,8 @@ from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.rgat import RGAT
 from models.cnn import CNN
-from models.moe import MixtureOfExperts
+from models.moe_dense import MoeDense
+from models.moe_sparse import MoeSparse
 from loss import Loss
 
 class Model(nn.Module):
@@ -77,9 +78,20 @@ class Model(nn.Module):
         )
 
         if self.cfg.use_moe:
-            self.bilinear = MixtureOfExperts(self.cfg,
-                                             self.cfg.num_experts, self.cfg.noise_scale,
-                                             emb_size // 2, emb_size // 2, self.cfg.num_rel)
+            if self.cfg.moe_type == 'dense':
+                self.bilinear = MoeDense(self.cfg,
+                                         self.cfg.num_experts,
+                                         self.cfg.noise_scale,
+                                         emb_size // 2, emb_size // 2,
+                                         self.cfg.num_rel)
+            elif self.cfg.moe_type == 'sparse':
+                self.bilinear = MoeSparse(self.cfg,
+                                         self.cfg.num_experts,
+                                         self.cfg.sparse_topk,
+                                         self.cfg.noise_scale,
+                                         emb_size // 2, emb_size // 2,
+                                         self.cfg.num_rel)
+
         else:
             self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
 
@@ -421,7 +433,8 @@ class Model(nn.Module):
             raise Exception("Need to re-define")
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
-        logits, gate_out = self.bilinear(h_rep, t_rep)
+        # just work for sparse.
+        logits, gate_out = self.bilinear(h_rep, t_rep, is_training)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels

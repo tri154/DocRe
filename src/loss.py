@@ -32,7 +32,7 @@ class Loss:
 
         assert torch.isfinite(coefvar).all(), "Coefficient of variation has NaN or Inf"
 
-        # coefvar = coefvar ** 2
+        coefvar = coefvar ** 2
         return coefvar
 
 
