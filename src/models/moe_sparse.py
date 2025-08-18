@@ -105,7 +105,7 @@ class MoeSparse(nn.Module):
         gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
 
         if self.more_logging:
-            self.cfg.logging(f"{gates }")
+            self.cfg.logging(f"{gate_probs }")
         temp = F.one_hot(torch.argmax(gates.detach(), dim=-1), num_classes=gates.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
