@@ -88,12 +88,13 @@ class MoeSparse(nn.Module):
         # todo: gate_out modify ???
         return out, gate_out
 
-    def forward(self, h_rep ,t_rep, is_training=True):
+    def forward(self, h_rep ,t_rep, is_training=True, noise_epsilon=1e-2):
         # TODO: implement sparse moe with importance loss.
         # NOTE: add load balance loss, if needed.
         gate_logits = self.gate(h_rep, t_rep)
         if is_training:
-            noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * F.softplus(self.noise(h_rep, t_rep))
+            noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
+            noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
             gate_logits = gate_logits + noise_logits
 
         gate_probs = F.softmax(gate_logits)
