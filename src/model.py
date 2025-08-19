@@ -39,9 +39,9 @@ class Model(nn.Module):
                                           high_layers=self.cfg.high_layers,
                                           num_bases=self.cfg.num_bases)
             self.ht_extractor = nn.Linear(emb_size*2, emb_size*1)
-        elif self.cfg.graph_type == 'rgat':
-            self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
-            self.ht_extractor = nn.Linear(emb_size*18, emb_size*2)
+        # elif self.cfg.graph_type == 'rgat':
+        #     self.graph_model = RGAT(emb_size, emb_size, num_relations=4, num_node_type=3, type_dim=self.cfg.type_dim, num_layers=self.cfg.graph_layers)
+        #     self.ht_extractor = nn.Linear(emb_size*18, emb_size*2)
         else:
             raise Exception("Define graph model.")
 
@@ -84,6 +84,7 @@ class Model(nn.Module):
                                          self.cfg.noise_scale,
                                          emb_size // 2, emb_size // 2,
                                          self.cfg.num_rel)
+                self.re_model = lambda h, t, is_training=True: self.bilinear(h, t)
             elif self.cfg.moe_type == 'sparse':
                 self.bilinear = MoeSparse(self.cfg,
                                          self.cfg.num_experts,
@@ -91,9 +92,11 @@ class Model(nn.Module):
                                          self.cfg.noise_scale,
                                          emb_size // 2, emb_size // 2,
                                          self.cfg.num_rel)
-
+                self.re_model = lambda h, t, is_training=True: self.bilinear(h, t, is_training=is_training)
         else:
             self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
+            self.re_model = lambda h, t, is_training=True: (self.bilinear(h, t), None)
+
 
         self.loss = Loss(cfg)
 
@@ -434,7 +437,7 @@ class Model(nn.Module):
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         # just work for sparse.
-        logits, gate_out = self.bilinear(h_rep, t_rep, is_training)
+        logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
@@ -442,7 +445,7 @@ class Model(nn.Module):
         re_loss = self.loss.cal_loss(logits, batch_labels)
 
         importance_loss = 0.0
-        if self.cfg.use_importance_loss:
+        if self.cfg.use_moe and self.cfg.use_importance_loss:
             importance_loss = self.loss.importance_loss(gate_out)
 
         psd_loss, current_tradeoff = 0.0, 0.0
