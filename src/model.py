@@ -445,11 +445,12 @@ class Model(nn.Module):
         if self.cfg.use_importance_loss:
             importance_loss = self.loss.importance_loss(gate_out)
 
-        kd_loss, current_tradeoff = 0.0, 0.0
+        psd_loss, current_tradeoff = 0.0, 0.0
         if batch_teacher_logits is not None:
-            kd_loss, current_tradeoff = self.loss.PSD_loss(logits, batch_teacher_logits, current_epoch)
+            psd_loss, current_tradeoff = self.loss.PSD_loss(logits, batch_teacher_logits, current_epoch)
 
-        loss = re_loss + current_tradeoff * kd_loss
+        loss = re_loss
+        loss += current_tradeoff * psd_loss
         loss += self.cfg.importance_weight * importance_loss
         loss += self.cfg.sc_weight * sc_loss
 

@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument("--new_lr", type=float, default=1e-4)
     parser.add_argument("--pretrained_lr", type=float, default=5e-5)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
-    parser.add_argument("--patience", type=int, default=-1)
+    parser.add_argument("--patience", type=int, default=-1, help="early stop, -1=off")
 
 
     parser.add_argument('--device', type=str, default='cuda:0')
@@ -68,10 +68,10 @@ def parse_args():
 
     parser.add_argument('--re_loss', type=str, default='AT')
     parser.add_argument('--focal_gamma', type=float, default=2.5, help="for AT and CE focal loss.")
-    parser.add_argument('--β', type=float, default=1, help="for sigmoidF1, =1 for normal sigmoid.")
-    parser.add_argument('--η', type=float, default=0, help="for sigmoidF1, =0 for normal sigmoid.")
-    parser.add_argument('--T', type=float, default=1.0, help="for softmaxF1, =1 for normal softmax.")
-    parser.add_argument('--penalty_weight', default=1.0, type=float, help="for regularization, sigmoidF1, softmaxF1.")
+    parser.add_argument('--penalty_weight', default=1.0, type=float, help="for regularization, sigmoidF1, softmaxF1, CE focal.")
+    # parser.add_argument('--β', type=float, default=1, help="for sigmoidF1, =1 for normal sigmoid.")
+    # parser.add_argument('--η', type=float, default=0, help="for sigmoidF1, =0 for normal sigmoid.")
+    # parser.add_argument('--T', type=float, default=1.0, help="for softmaxF1, =1 for normal softmax.")
 
     args = parser.parse_args()
 
