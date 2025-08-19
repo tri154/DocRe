@@ -31,10 +31,10 @@ class MoeSparse(nn.Module):
 
         self.gate = nn.Bilinear(in1_features, in2_features, num_experts)
         self.noise = nn.Bilinear(in1_features, in2_features, num_experts)
-        nn.init.zeros_(self.gate.weight)
-        nn.init.zeros_(self.gate.bias)
-        nn.init.zeros_(self.noise.weight)
-        nn.init.zeros_(self.noise.bias)
+        # nn.init.zeros_(self.gate.weight)
+        # nn.init.zeros_(self.gate.bias)
+        # nn.init.zeros_(self.noise.weight)
+        # nn.init.zeros_(self.noise.bias)
 
 
     def reset_stats(self):
