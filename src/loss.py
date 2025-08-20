@@ -35,7 +35,6 @@ class Loss:
         coefvar = coefvar ** 2
         return coefvar
 
-
     def AT_loss_original(self, logits, labels):
         th_label = torch.zeros_like(labels, dtype=torch.float).to(labels)
         th_label[:, self.cfg.id_rel_thre] = 1.0
