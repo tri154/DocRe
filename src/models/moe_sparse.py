@@ -123,7 +123,7 @@ class MoeSparse(nn.Module):
     def forward_dispatch(self, h_rep ,t_rep, is_training=True, noise_epsilon=1e-2):
         # NOTE: add load balance loss, if needed.
         gate_logits = self.gate(h_rep, t_rep)
-        if is_training:
+        if is_training and False:
             noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
             noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
             gate_logits = gate_logits + noise_logits
