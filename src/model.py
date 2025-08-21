@@ -90,7 +90,8 @@ class Model(nn.Module):
                                          self.cfg.sparse_topk,
                                          emb_size // 2, emb_size // 2,
                                          self.cfg.num_rel,
-                                         self.cfg.noise_type)
+                                         self.cfg.noise_type,
+                                         self.cfg.noise_limit)
                 # self.re_model = lambda h, t, is_training=True: self.bilinear(h, t, is_training=is_training)
                 self.re_model = lambda h, t, is_training=True, cur_epoch=None: self.bilinear(h, t, is_training=is_training, cur_epoch=cur_epoch)
         else:

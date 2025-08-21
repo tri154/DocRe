@@ -153,7 +153,7 @@ class Trainer:
     def debug(self):
         for batch_input in self.prepare_batch(self.cfg.train_batch_size):
             self.model.bilinear.reset_stats()
-            loss, _ = self.model(batch_input, is_training=True)
+            loss, _ = self.model(batch_input, is_training=True, current_epoch=2)
             print(f"Stats: {self.model.bilinear.stats} ")
             self.cfg.logging(f"Stats: {self.model.bilinear.stats} ")
             print(loss)

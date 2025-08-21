@@ -6,7 +6,7 @@ from models.expert import Expert
 class MoeSparse(nn.Module):
     # TODO: remove uniform noise if normal noise works well
 
-    def __init__(self, cfg, num_experts, topk, in1_features, in2_features, out_features, noise_type=None):
+    def __init__(self, cfg, num_experts, topk, in1_features, in2_features, out_features, noise_type=None, noise_limit=None):
         super().__init__()
         self.cfg = cfg
         self.num_experts = num_experts
@@ -32,6 +32,7 @@ class MoeSparse(nn.Module):
             nn.init.zeros_(self.noise.bias)
         elif noise_type == 'uniform':
             self.__add_noise = self.__add_uniform_noise
+            self.noise_limit = noise_limit
 
     def forward(self, h_rep ,t_rep, is_training=True, cur_epoch=None):
         # NOTE: be carefull when modify.
@@ -44,7 +45,7 @@ class MoeSparse(nn.Module):
         return gate_logits + noise_logits
 
     def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
-        if cur_epoch <= 1:
+        if cur_epoch < self.noise_limit:
             noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
             return gate_logits + noise_epsilon * noise_logits
         return gate_logits
