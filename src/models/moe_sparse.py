@@ -25,6 +25,7 @@ class MoeSparse(nn.Module):
         nn.init.zeros_(self.gate.bias)
         nn.init.zeros_(self.noise.weight)
         nn.init.zeros_(self.noise.bias)
+        self.cfg.logging(f"{self.gate.weight}")
 
     def forward(self, h_rep ,t_rep, is_training=True, noise_epsilon=1e-2):
         # NOTE: be carefull when modify.
@@ -41,8 +42,7 @@ class MoeSparse(nn.Module):
 
         gate_probs = F.softmax(gate_logits, dim=-1)
         top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
-        if self.topk > 1:
-            top_logits = top_logits / top_logits.sum(dim=-1, keepdim=True)
+        top_logits = top_logits / top_logits.sum(dim=-1, keepdim=True)
 
         zeros = torch.zeros_like(gate_probs, requires_grad=True, device=gate_probs.device)
         gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
@@ -58,7 +58,7 @@ class MoeSparse(nn.Module):
             expert_ids = top_indices[sample_id]
             sample_gate = top_logits[sample_id]
             # debug:
-            sample_gate = torch.ones_like(sample_gate, device=h_rep.device)
+            # sample_gate = torch.ones_like(sample_gate, device=h_rep.device)
             # =================
             sample_out = torch.stack([self.experts[i](h_rep[sample_id], t_rep[sample_id]) for i in expert_ids])
             out.append(sample_gate @ sample_out)

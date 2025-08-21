@@ -153,7 +153,7 @@ class Trainer:
     def debug(self):
         for batch_input in self.prepare_batch(self.cfg.train_batch_size):
             self.model.bilinear.reset_stats()
-            loss, _ = self.model(batch_input, is_training=True)
+            loss, _ = self.model(batch_input, is_training=True, current_epoch=1)
             print(f"Stats: {self.model.bilinear.stats} ")
             self.cfg.logging(f"Stats: {self.model.bilinear.stats} ")
             print(loss)
@@ -204,6 +204,7 @@ class Trainer:
             epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
             print(f"Stats train: {self.model.bilinear.stats} ")
             self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ")
+            self.cfg.logging(f"{self.model.bilinear.gate.weight}")
 
             self.model.bilinear.reset_stats()
             d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
