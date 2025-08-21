@@ -1,17 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-class Expert(nn.Module):
-
-    def __init__(self, in1_features, in2_features, out_features):
-        super().__init__()
-        self.bilinear = nn.Bilinear(in1_features, in2_features, out_features)
-
-    def forward(self, h_rep, t_rep):
-        output = self.bilinear(h_rep, t_rep)
-        return output
-
+from models.expert import Expert
 
 class MoeDense(nn.Module):
     # TODO: remove uniform noise if normal noise works well

@@ -1,18 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
-class Expert(nn.Module):
-
-    def __init__(self, in1_features, in2_features, out_features):
-        super().__init__()
-        self.bilinear = nn.Bilinear(in1_features, in2_features, out_features)
-
-    def forward(self, h_rep, t_rep):
-        output = self.bilinear(h_rep, t_rep)
-        return output
-
+from models.expert import Expert
 
 class MoeSparse(nn.Module):
     # TODO: remove uniform noise if normal noise works well
@@ -52,7 +41,8 @@ class MoeSparse(nn.Module):
 
         gate_probs = F.softmax(gate_logits, dim=-1)
         top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
-        top_logits = top_logits / top_logits.sum(dim=-1, keepdim=True)
+        if self.topk > 1:
+            top_logits = top_logits / top_logits.sum(dim=-1, keepdim=True)
 
         zeros = torch.zeros_like(gate_probs, requires_grad=True, device=gate_probs.device)
         gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
@@ -92,7 +82,7 @@ class MoeSparse(nn.Module):
 
     def forward_dispatch(self, h_rep ,t_rep, is_training=True, noise_epsilon=1e-2):
         # NOTE: add load balance loss, if needed.
-        # NOTE: currently not in use.
+        # NOTE: currently not in use, stick with brute force for reliable.
         gate_logits = self.gate(h_rep, t_rep)
         if is_training:
             noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
