@@ -31,13 +31,14 @@ HIGH_LAYERS=2
 
 USE_MOE=True
 MOE_TYPE="sparse"
+NOISE_TYPE="uniform"
 SPARSE_TOPK=1
 NUM_EXPERTS=4
 NOISE_SCALE=0.5
 USE_IMPORTANCE_LOSS=True
 IMPORTANCE_WEIGHT=0.1
 
-USE_PSD=False
+USE_PSD=True
 LOWER_TEMP=2.0
 UPPER_TEMP=20.0
 LOSS_TRADEOFF=4.999979907145212
@@ -80,6 +81,7 @@ python main.py \
   --use_moe $USE_MOE \
   --sparse_topk $SPARSE_TOPK \
   --moe_type $MOE_TYPE \
+  --noise_type $NOISE_TYPE \
   --num_experts $NUM_EXPERTS \
   --noise_scale $NOISE_SCALE \
   --use_importance_loss $USE_IMPORTANCE_LOSS \

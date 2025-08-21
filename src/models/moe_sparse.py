@@ -6,13 +6,14 @@ from models.expert import Expert
 class MoeSparse(nn.Module):
     # TODO: remove uniform noise if normal noise works well
 
-    def __init__(self, cfg, num_experts, topk, noise_scale, in1_features, in2_features, out_features):
+    def __init__(self, cfg, num_experts, topk, in1_features, in2_features, out_features, noise_type=None):
         super().__init__()
         self.cfg = cfg
         self.num_experts = num_experts
         self.topk = topk
-        self.noise_scale = noise_scale
         self.more_logging = False
+        self.noise_type = noise_type
+
 
         self.stats = torch.zeros(num_experts)
         self.experts = nn.ModuleList([
@@ -20,24 +21,39 @@ class MoeSparse(nn.Module):
         ])
 
         self.gate = nn.Bilinear(in1_features, in2_features, num_experts)
-        self.noise = nn.Bilinear(in1_features, in2_features, num_experts)
+
         nn.init.zeros_(self.gate.weight)
         nn.init.zeros_(self.gate.bias)
-        nn.init.zeros_(self.noise.weight)
-        nn.init.zeros_(self.noise.bias)
 
-    def forward(self, h_rep ,t_rep, is_training=True, noise_epsilon=1e-2):
+        if noise_type == 'normal':
+            self.__add_noise = self.__add_trainable_normal_noise
+            self.noise = nn.Bilinear(in1_features, in2_features, num_experts)
+            nn.init.zeros_(self.noise.weight)
+            nn.init.zeros_(self.noise.bias)
+        elif noise_type == 'uniform':
+            self.__add_noise = self.__add_uniform_noise
+
+    def forward(self, h_rep ,t_rep, is_training=True, cur_epoch=None):
         # NOTE: be carefull when modify.
-        return self.forward_not_dispatch(h_rep, t_rep, is_training=is_training)
+        return self.forward_not_dispatch(h_rep, t_rep, is_training=is_training, cur_epoch=cur_epoch)
 
 
-    def forward_not_dispatch(self, h_rep ,t_rep, is_training=True, noise_epsilon=1e-2):
+    def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
+        noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
+        return gate_logits + noise_logits
+
+    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        if cur_epoch <= 1:
+            noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
+            return gate_logits + noise_epsilon * noise_logits
+        return gate_logits
+
+    def forward_not_dispatch(self, h_rep ,t_rep, is_training=True, cur_epoch=None):
         # NOTE: add load balance loss, if need.
         gate_logits = self.gate(h_rep, t_rep)
-        if is_training:
-            noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
-            noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
-            gate_logits = gate_logits + noise_logits
+        if is_training and self.noise_type is not None:
+            gate_logits = self.__add_noise(h_rep, t_rep, gate_logits, cur_epoch=cur_epoch)
 
         gate_probs = F.softmax(gate_logits, dim=-1)
         top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
