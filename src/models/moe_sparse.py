@@ -57,6 +57,9 @@ class MoeSparse(nn.Module):
         for sample_id in range(n_sample):
             expert_ids = top_indices[sample_id]
             sample_gate = top_logits[sample_id]
+            # debug:
+            sample_gate = torch.ones_like(sample_gate, device=h_rep.device)
+            # =================
             sample_out = torch.stack([self.experts[i](h_rep[sample_id], t_rep[sample_id]) for i in expert_ids])
             out.append(sample_gate @ sample_out)
         out = torch.stack(out)
