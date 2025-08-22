@@ -3,3 +3,4 @@ push.sh
 __pycache__
 *.pkl
 push.sh
+*log*.txt

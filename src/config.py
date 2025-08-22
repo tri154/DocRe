@@ -184,6 +184,13 @@ class Config:
         with open(self.log_path, 'a') as file:
             print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
 
+    def another_logging(self, text):
+        base, ext = os.path.splitext(self.log_path)
+        stats_log_path = f"{base}_stats{ext}"
+
+        with open(stats_log_path, 'a') as file:
+            print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
+
     def log_config(self):
         self.logging("Configuration Settings:")
         for key, value in sorted(self.__dict__.items()):

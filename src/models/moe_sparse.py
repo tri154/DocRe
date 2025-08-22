@@ -38,18 +38,6 @@ class MoeSparse(nn.Module):
         # NOTE: be carefull when modify.
         return self.forward_not_dispatch(h_rep, t_rep, is_training=is_training, cur_epoch=cur_epoch)
 
-
-    def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
-        noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
-        noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
-        return gate_logits + noise_logits
-
-    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
-        if cur_epoch < self.noise_limit:
-            noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
-            return gate_logits + noise_epsilon * noise_logits
-        return gate_logits
-
     def forward_not_dispatch(self, h_rep ,t_rep, is_training=True, cur_epoch=None):
         # NOTE: add load balance loss, if need.
         gate_logits = self.gate(h_rep, t_rep)
@@ -65,7 +53,7 @@ class MoeSparse(nn.Module):
         gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
 
         if self.more_logging:
-            self.cfg.logging(f"{gate_probs }")
+            self.cfg.another_logging(f"{gate_probs }")
         temp = F.one_hot(torch.argmax(gates.detach(), dim=-1), num_classes=gates.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
@@ -80,6 +68,16 @@ class MoeSparse(nn.Module):
 
         return out, gates
 
+    def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
+        noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
+        return gate_logits + noise_logits
+
+    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        if cur_epoch < self.noise_limit:
+            noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
+            return gate_logits + noise_epsilon * noise_logits
+        return gate_logits
 
 
 
