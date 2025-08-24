@@ -38,6 +38,7 @@ NUM_EXPERTS=4
 NOISE_SCALE=0.5
 USE_IMPORTANCE_LOSS=True
 IMPORTANCE_WEIGHT=0.1
+GATEL_WEIGHT=0.1
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -88,6 +89,7 @@ python main.py \
   --noise_scale $NOISE_SCALE \
   --use_importance_loss $USE_IMPORTANCE_LOSS \
   --importance_weight $IMPORTANCE_WEIGHT \
+  --gatel_weight $GATEL_WEIGHT \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \

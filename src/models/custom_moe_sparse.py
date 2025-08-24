@@ -10,8 +10,8 @@ class CustomMoeSparse(nn.Module):
         self.cfg = cfg
         self.num_experts = num_experts
         self.topk = topk
-        if self.topk != 1:
-            raise Exception("only support topk=1")
+        if self.topk > 1:
+            raise Exception("currently support topk=1")
         self.noise_type = noise_type
 
         self.more_logging = False
@@ -65,23 +65,34 @@ class CustomMoeSparse(nn.Module):
             out.append(sample_out)
         out = torch.stack(out)
 
+        gate_loss = 0.0
         if is_training:
             pred = torch.argmax(out, dim=-1)
-            pred = F.one_hot(pred, num_classes=out.shape[-1]).float()
-            # CONT: here
-            print(top_indices)
-            print(gate_probs)
+            labels = torch.argmax(labels, dim=-1)
+            mask = pred == labels
 
+            positive = top_logits[mask]
+            positive_loss = - torch.log(positive).sum()
 
-            # print(pred)
-            # print(labels)
-            input()
+            negative_indices = torch.nonzero(~mask).squeeze(-1)
+            negative_hrep = h_rep[negative_indices]
+            negative_trep = t_rep[negative_indices]
+            negative_labels = labels[negative_indices]
+            res = torch.stack([self.experts[idx](negative_hrep, negative_trep) for idx in range(self.num_experts)], dim=1)
+            res = torch.softmax(res, dim=-1)
 
-        return out, gates
+            idx = negative_labels.view(-1, 1, 1).expand(-1, self.num_experts, 1)
+            temp = torch.gather(res, dim=2, index=idx).squeeze(-1)
+            # _, indices = torch.topk(temp, dim=-1, k=self.topk)
+            # indices = indices.squeeze(-1)
+            indices = torch.argmax(temp, dim=-1)
 
-    # def forward(self, h_rep ,t_rep, is_training=True, cur_epoch=None):
-    #     # TODO: implement dispatch version.
-    #     return self.forward_not_dispatch(h_rep, t_rep, is_training=is_training, cur_epoch=cur_epoch)
+            negative = gate_probs[negative_indices, indices]
+            negative_loss = - torch.log(negative).sum()
+
+            gate_loss = positive_loss + negative_loss
+
+        return out, gates, gate_loss
 
     def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
         if cur_epoch < self.noise_limit:

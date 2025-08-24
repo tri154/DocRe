@@ -440,7 +440,7 @@ class Model(nn.Module):
 
         # logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training, cur_epoch=current_epoch)
         # for custom moe only
-        logits, gate_out = self.re_model(h_rep, t_rep, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
+        logits, gate_out, gate_loss = self.re_model(h_rep, t_rep, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
@@ -459,5 +459,6 @@ class Model(nn.Module):
         loss += current_tradeoff * psd_loss
         loss += self.cfg.importance_weight * importance_loss
         loss += self.cfg.sc_weight * sc_loss
+        loss += self.cfg.gatel_weight * gate_loss
 
         return loss, torch.split(logits.detach().cpu(), num_rel_per_doc.tolist())

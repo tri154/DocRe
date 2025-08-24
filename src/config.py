@@ -57,6 +57,7 @@ def parse_args():
     parser.add_argument('--noise_scale', type=float, default=0.5, help="for uniform noise.")
     parser.add_argument('--use_importance_loss', type=str2bool, default=True, help="for uniform noise.")
     parser.add_argument('--importance_weight', type=float, default=1.0, help="for normal noise.")
+    parser.add_argument('--gatel_weight', type=float, default=0.1, help="for gate loss weight.")
 
     parser.add_argument('--use_psd', type=str2bool, default=True)
     parser.add_argument('--lower_temp', type=float, default=2.0)
