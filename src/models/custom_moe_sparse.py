@@ -1,0 +1,101 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from models.expert import Expert
+
+class CustomMoeSparse(nn.Module):
+
+    def __init__(self, cfg, num_experts, topk, in1_features, in2_features, out_features, noise_type=None, noise_limit=None):
+        super().__init__()
+        self.cfg = cfg
+        self.num_experts = num_experts
+        self.topk = topk
+        if self.topk != 1:
+            raise Exception("only support topk=1")
+        self.noise_type = noise_type
+
+        self.more_logging = False
+        self.stats = torch.zeros(num_experts)
+
+        self.experts = nn.ModuleList([
+            Expert(in1_features, in2_features, out_features) for _ in range(num_experts)
+        ])
+
+        self.gate = nn.Bilinear(in1_features, in2_features, num_experts)
+
+        nn.init.zeros_(self.gate.weight)
+        nn.init.zeros_(self.gate.bias)
+
+        if noise_type == 'normal':
+            self.__add_noise = self.__add_trainable_normal_noise
+            self.noise = nn.Bilinear(in1_features, in2_features, num_experts)
+            nn.init.zeros_(self.noise.weight)
+            nn.init.zeros_(self.noise.bias)
+        elif noise_type == 'uniform':
+            self.__add_noise = self.__add_uniform_noise
+            self.noise_limit = noise_limit
+
+    def forward(self, h_rep ,t_rep, labels, is_training=True, cur_epoch=None):
+        gate_logits = self.gate(h_rep, t_rep)
+        if is_training and self.noise_type is not None:
+            gate_logits = self.__add_noise(h_rep, t_rep, gate_logits, cur_epoch=cur_epoch)
+
+        gate_probs = F.softmax(gate_logits, dim=-1)
+        top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
+
+        zeros = torch.zeros_like(gate_probs, requires_grad=True, device=gate_probs.device)
+        gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
+
+        if self.more_logging:
+            self.cfg.another_logging(f"{gate_probs }")
+        temp = F.one_hot(torch.argmax(gates.detach(), dim=-1), num_classes=gates.shape[-1]).int()
+        self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
+
+        n_sample = h_rep.shape[0]
+        out = list()
+        for sample_id in range(n_sample):
+            expert_ids = top_indices[sample_id]
+            sample_out = torch.stack([self.experts[i](h_rep[sample_id], t_rep[sample_id]) for i in expert_ids])
+
+            sample_gate = top_logits[sample_id]
+            sample_gate = sample_gate.detach() # gate weight not involved in main loss.
+            sample_gate = sample_gate / sample_gate.sum(dim=-1, keepdim=True)
+
+            sample_out = sample_gate @ sample_out
+            out.append(sample_out)
+        out = torch.stack(out)
+
+        if is_training:
+            pred = torch.argmax(out, dim=-1)
+            pred = F.one_hot(pred, num_classes=out.shape[-1]).float()
+            # CONT: here
+            print(top_indices)
+            print(gate_probs)
+
+
+            # print(pred)
+            # print(labels)
+            input()
+
+        return out, gates
+
+    # def forward(self, h_rep ,t_rep, is_training=True, cur_epoch=None):
+    #     # TODO: implement dispatch version.
+    #     return self.forward_not_dispatch(h_rep, t_rep, is_training=is_training, cur_epoch=cur_epoch)
+
+    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        if cur_epoch < self.noise_limit:
+            noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
+            return gate_logits + noise_epsilon * noise_logits
+        return gate_logits
+
+    def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
+        noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
+        return gate_logits + noise_logits
+
+    def reset_stats(self):
+        self.stats = torch.zeros(self.num_experts)
+
+    def set_more_logging(self, value):
+        self.more_logging = value

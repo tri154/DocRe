@@ -9,7 +9,8 @@ from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.cnn import CNN
 from models.moe_dense import MoeDense
-from models.moe_sparse import MoeSparse
+# from models.moe_sparse import MoeSparse
+from models.custom_moe_sparse import CustomMoeSparse
 from loss import Loss
 
 class Model(nn.Module):
@@ -83,9 +84,9 @@ class Model(nn.Module):
                                          self.cfg.noise_scale,
                                          emb_size // 2, emb_size // 2,
                                          self.cfg.num_rel)
-                self.re_model = lambda h, t, is_training=True, cur_epoch=None: self.bilinear(h, t)
+                self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: self.bilinear(h, t)
             elif self.cfg.moe_type == 'sparse':
-                self.bilinear = MoeSparse(self.cfg,
+                self.bilinear = CustomMoeSparse(self.cfg,
                                          self.cfg.num_experts,
                                          self.cfg.sparse_topk,
                                          emb_size // 2, emb_size // 2,
@@ -93,10 +94,10 @@ class Model(nn.Module):
                                          self.cfg.noise_type,
                                          self.cfg.noise_limit)
                 # self.re_model = lambda h, t, is_training=True: self.bilinear(h, t, is_training=is_training)
-                self.re_model = lambda h, t, is_training=True, cur_epoch=None: self.bilinear(h, t, is_training=is_training, cur_epoch=cur_epoch)
+                self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: self.bilinear(h, t, labels=batch_labels, is_training=is_training, cur_epoch=cur_epoch)
         else:
             self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
-            self.re_model = lambda h, t, is_training=True, cur_epoch=None: (self.bilinear(h, t), None)
+            self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: (self.bilinear(h, t), None)
 
 
         self.loss = Loss(cfg)
@@ -437,7 +438,9 @@ class Model(nn.Module):
             raise Exception("Need to re-define")
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
-        logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training, cur_epoch=current_epoch)
+        # logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training, cur_epoch=current_epoch)
+        # for custom moe only
+        logits, gate_out = self.re_model(h_rep, t_rep, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels

@@ -25,7 +25,6 @@ def parse_args():
     parser.add_argument('--save_path', type=str, help="file path to save model.", default='best.pt')
     parser.add_argument('--log_path', type=str, default='log.txt')
     parser.add_argument('--seed', type=int, default=2004)
-    parser.add_argument('--tqdm', action='store_true')
 
     parser.add_argument('--num_epoch', type=int, default=20)
     parser.add_argument('--train_batch_size', type=int, default=4)
@@ -180,11 +179,15 @@ class Config:
         torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms(True, warn_only=True)
 
-    def logging(self, text):
+    def logging(self, text, is_printed=False):
+        if is_printed:
+            print(text)
         with open(self.log_path, 'a') as file:
             print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
 
-    def another_logging(self, text):
+    def another_logging(self, text, is_printed=False):
+        if is_printed:
+            print(text)
         base, ext = os.path.splitext(self.log_path)
         stats_log_path = f"{base}_stats{ext}"
 
