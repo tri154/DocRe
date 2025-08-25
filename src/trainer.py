@@ -197,6 +197,7 @@ class Trainer:
     def train_warmup_epoch(self, idx_epoch, batch_size):
         self.model.train()
         self.prepare_warmup()
+        pass
 
 
 
