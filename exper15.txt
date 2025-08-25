@@ -1,0 +1,15 @@
+cu de cho no train trong 1 epoch (khong dung import loss, khong dung gate loss), sau do thi frezze
+tat ca weight ngoai tru weight cua gate (su dung import loss )
+
+
+warmup:
+1 epoch dau
+add noise, co import loss, khong gate loss, ko gate freeze.
+
+fit data:
+1 epoch
+frezze gate lai, khong noise, khong import loss, khong gate loss.
+
+1 epoch
+re-routing:
+freeze tat ca ngoai tru gate, khong noise, khong import loss, co gate loss.

@@ -17,8 +17,8 @@ NEW_LR=1e-4
 PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
-# DEVICE="cuda:0"
-DEVICE="cpu"
+DEVICE="cuda:0"
+# DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
@@ -31,7 +31,7 @@ HIGH_LAYERS=2
 USE_MOE=True
 MOE_TYPE="sparse"
 NOISE_TYPE="uniform"
-NOISE_LIMIT=1
+# NOISE_LIMIT=1
 SPARSE_TOPK=1
 NUM_EXPERTS=4
 NOISE_SCALE=0.5
@@ -83,7 +83,6 @@ python main.py \
   --sparse_topk $SPARSE_TOPK \
   --moe_type $MOE_TYPE \
   --noise_type $NOISE_TYPE \
-  --noise_limit $NOISE_LIMIT \
   --num_experts $NUM_EXPERTS \
   --noise_scale $NOISE_SCALE \
   --use_importance_loss $USE_IMPORTANCE_LOSS \
@@ -102,6 +101,7 @@ python main.py \
   --penalty_weight $PENALTY_WEIGHT
 
 
+  # --noise_limit $NOISE_LIMIT \
   # --β $BETA \
   # --η $ETA \
   # --T $T \

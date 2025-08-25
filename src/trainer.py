@@ -164,34 +164,14 @@ class Trainer:
         for did, doc_idx in enumerate(range(indicies[0], indicies[1])):
             self.train_set[doc_idx]['teacher_logits'] = batch_logits[did]
 
-    def train_one_epoch_old(self, current_epoch, batch_size):
-        self.model.train()
-        self.opt.zero_grad()
-
-        np.random.shuffle(self.train_set)
-
-        num_batch = math.ceil(len(self.train_set) / batch_size)
-
-
-        total_loss = 0.0
-        for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
-            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
-            if self.cfg.use_psd:
-                self.PSD_add_logits(batch_logits, batch_input['indices'])
-            total_loss += batch_loss.item()
-            (batch_loss / self.cfg.update_freq).backward()
-
-            if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
-                clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
-                self.opt.step()
-                self.opt.zero_grad()
-                self.sched.step()
-        return total_loss
-
+    # new implement
     def train_one_epoch(self, current_epoch, batch_size):
         self.model.train()
         self.opt.zero_grad()
+        # diff
         if current_epoch == 0: self.prepare_warmup()
+        else: self.prepare_fitting()
+        # diff
 
         np.random.shuffle(self.train_set)
 
@@ -204,6 +184,7 @@ class Trainer:
 
             print(batch_loss)
             input("DEBUG")
+            break
 
             # =====================
             if self.cfg.use_psd:
@@ -216,13 +197,33 @@ class Trainer:
                 self.opt.step()
                 self.opt.zero_grad()
                 self.sched.step()
+
+        self.prepare_rerouting()
+        # CONT: seperated optimizer, scheduler.
+
         return total_loss
 
     def prepare_warmup(self):
+        # self.cfg.noise_limit = 1
         self.cfg.noise_type = 'uniform'
-        self.cfg.noise_limit = 1
         self.cfg.use_importance_loss = True
         self.cfg.use_gate_loss = False
+
+    def prepare_fitting(self):
+        self.model.bilinear.toggle_gate_weight(False)
+        self.cfg.noise_type = None
+        self.cfg.use_importance_loss = False
+        self.cfg.use_gate_loss = False
+
+    def prepare_rerouting(self):
+        for name, param in self.model.named_parameters():
+            param.requires_grad = False
+        self.model.bilinear.toggle_gate_weight(True)
+        for name, param in self.model.named_parameters():
+            print(name, param.requires_grad)
+        self.cfg.noise_type = None
+        self.cfg.use_importance_loss = False
+        self.cfg.use_gate_loss = True
 
     def train(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:
@@ -257,6 +258,33 @@ class Trainer:
         self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
         return self.best_f1_dev
+
+    # end new
+
+    def train_one_epoch_old(self, current_epoch, batch_size):
+        self.model.train()
+        self.opt.zero_grad()
+
+        np.random.shuffle(self.train_set)
+
+        num_batch = math.ceil(len(self.train_set) / batch_size)
+
+
+        total_loss = 0.0
+        for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
+            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
+            if self.cfg.use_psd:
+                self.PSD_add_logits(batch_logits, batch_input['indices'])
+            total_loss += batch_loss.item()
+            (batch_loss / self.cfg.update_freq).backward()
+
+            if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
+                clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
+                self.opt.step()
+                self.opt.zero_grad()
+                self.sched.step()
+        return total_loss
+
 
     def train_old(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:

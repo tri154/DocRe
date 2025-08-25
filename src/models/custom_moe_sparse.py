@@ -5,13 +5,12 @@ from models.expert import Expert
 
 class CustomMoeSparse(nn.Module):
 
-    def __init__(self, cfg, in1_features, in2_features, out_features, noise_type=None, noise_limit=None):
+    def __init__(self, cfg, in1_features, in2_features, out_features):
         super().__init__()
         self.cfg = cfg
         self.num_experts = self.cfg.num_experts
         self.topk = self.cfg.topk
         if self.topk > 1: raise Exception("currently support topk=1")
-        self.noise_type = noise_type
 
         self.more_logging = False
         self.stats = torch.zeros(self.num_experts)
@@ -25,7 +24,7 @@ class CustomMoeSparse(nn.Module):
         nn.init.zeros_(self.gate.weight)
         nn.init.zeros_(self.gate.bias)
 
-        if noise_type == 'normal':
+        if self.cfg.noise_type == 'normal':
             self.noise = nn.Bilinear(in1_features, in2_features, self.num_experts)
             nn.init.zeros_(self.noise.weight)
             nn.init.zeros_(self.noise.bias)
@@ -34,11 +33,13 @@ class CustomMoeSparse(nn.Module):
         if self.cfg.noise_type == 'normal':
             return self.__add_trainable_normal_noise(h_rep, t_rep, gate_logits)
         elif self.cfg.noise_type == 'uniform':
-            return self.__add_uniform_noise(h_rep, t_rep , gate_logits, cur_epoch=cur_epoch)
+            return self.__add_uniform_noise(h_rep, t_rep , gate_logits)
+        else:
+            raise Exception("not a noise type.")
 
     def forward(self, h_rep ,t_rep, labels, is_training=True, cur_epoch=None):
         gate_logits = self.gate(h_rep, t_rep)
-        if is_training and self.noise_type is not None:
+        if is_training and self.cfg.noise_type is not None:
             gate_logits = self.__add_noise(h_rep, t_rep, gate_logits, cur_epoch=cur_epoch)
 
         gate_probs = F.softmax(gate_logits, dim=-1)
@@ -95,11 +96,9 @@ class CustomMoeSparse(nn.Module):
 
         return out, gates, gate_loss
 
-    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
-        if cur_epoch < self.cfg.noise_limit:
-            noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
-            return gate_logits + noise_epsilon * noise_logits
-        return gate_logits
+    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2):
+        noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
+        return gate_logits + noise_epsilon * noise_logits
 
     def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
         noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
@@ -111,3 +110,7 @@ class CustomMoeSparse(nn.Module):
 
     def set_more_logging(self, value):
         self.more_logging = value
+
+    def toggle_gate_weight(self, value):
+        for param in self.gate.parameters():
+            param.requires_grad = value

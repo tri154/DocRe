@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument('--use_moe', type=str2bool, default=True)
     parser.add_argument('--moe_type', type=str, default="dense", help="dense or sparse.")
     parser.add_argument('--noise_type', type=str, default="normal", help="normal or uniform for sparse currently.")
-    parser.add_argument('--noise_limit', type=int, default=2, help="number of epoch add uniform noise.")
+    # parser.add_argument('--noise_limit', type=int, default=2, help="number of epoch add uniform noise.")
     parser.add_argument('--num_experts', type=int, default=4)
     parser.add_argument('--sparse_topk', type=int, default=1, help="topk for sparse moe. NOTE: hard code for 1.")
     parser.add_argument('--noise_scale', type=float, default=0.5, help="for uniform noise, only for dense moe.")
