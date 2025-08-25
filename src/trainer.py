@@ -188,13 +188,23 @@ class Trainer:
                 self.sched.step()
         return total_loss
 
+    def prepare_warmup(self):
+        self.cfg.noise_type = 'uniform'
+        self.cfg.use_importance_loss = True
+        pass
 
-    def train(self, num_epoches, batch_size, train_set=None, patience=-1):
+
+    def train_warmup_epoch(self, idx_epoch, batch_size):
+        self.model.train()
+        self.prepare_warmup()
+
+
+
+    def train(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:
             self.train_set = train_set
 
         self.best_f1_dev = 0
-        patience_counter = 0
         for idx_epoch in range(num_epoches):
             self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100, is_printed=True)
 
@@ -210,12 +220,6 @@ class Trainer:
             if d_f1 > self.best_f1_dev:
                 self.best_f1_dev = d_f1
                 torch.save(self.model.state_dict(), self.cfg.save_path)
-                patience_counter = 0
-            else:
-                patience_counter += 1
-                if patience_counter >= patience and patience > 0:
-                    self.cfg.logging("Early stopping triggered.", is_printed=True)
-                    break
 
             self.cur_epoch += 1
 
