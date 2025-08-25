@@ -87,8 +87,6 @@ class Model(nn.Module):
                 self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: self.bilinear(h, t)
             elif self.cfg.moe_type == 'sparse':
                 self.bilinear = CustomMoeSparse(self.cfg,
-                                         self.cfg.num_experts,
-                                         self.cfg.sparse_topk,
                                          emb_size // 2, emb_size // 2,
                                          self.cfg.num_rel,
                                          self.cfg.noise_type,

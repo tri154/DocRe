@@ -152,7 +152,7 @@ class Trainer:
     def debug(self):
         for batch_input in self.prepare_batch(self.cfg.train_batch_size):
             self.model.bilinear.reset_stats()
-            loss, _ = self.model(batch_input, is_training=True, current_epoch=1)
+            loss, _ = self.model(batch_input, is_training=True, current_epoch=0)
             print(f"Stats: {self.model.bilinear.stats} ")
             self.cfg.logging(f"Stats: {self.model.bilinear.stats} ")
             print(loss)
@@ -164,7 +164,7 @@ class Trainer:
         for did, doc_idx in enumerate(range(indicies[0], indicies[1])):
             self.train_set[doc_idx]['teacher_logits'] = batch_logits[did]
 
-    def train_one_epoch(self, current_epoch, batch_size):
+    def train_one_epoch_old(self, current_epoch, batch_size):
         self.model.train()
         self.opt.zero_grad()
 
@@ -188,20 +188,77 @@ class Trainer:
                 self.sched.step()
         return total_loss
 
+    def train_one_epoch(self, current_epoch, batch_size):
+        self.model.train()
+        self.opt.zero_grad()
+        if current_epoch == 0: self.prepare_warmup()
+
+        np.random.shuffle(self.train_set)
+
+        num_batch = math.ceil(len(self.train_set) / batch_size)
+
+        total_loss = 0.0
+        for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
+            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
+            # =====================
+
+            print(batch_loss)
+            input("DEBUG")
+
+            # =====================
+            if self.cfg.use_psd:
+                self.PSD_add_logits(batch_logits, batch_input['indices'])
+            total_loss += batch_loss.item()
+            (batch_loss / self.cfg.update_freq).backward()
+
+            if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
+                clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
+                self.opt.step()
+                self.opt.zero_grad()
+                self.sched.step()
+        return total_loss
+
     def prepare_warmup(self):
         self.cfg.noise_type = 'uniform'
+        self.cfg.noise_limit = 1
         self.cfg.use_importance_loss = True
-        pass
-
-
-    def train_warmup_epoch(self, idx_epoch, batch_size):
-        self.model.train()
-        self.prepare_warmup()
-        pass
-
-
+        self.cfg.use_gate_loss = False
 
     def train(self, num_epoches, batch_size, train_set=None):
+        if train_set is not None:
+            self.train_set = train_set
+
+        self.best_f1_dev = 0
+        for idx_epoch in range(num_epoches):
+            self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100, is_printed=True)
+
+            self.model.bilinear.reset_stats()
+            epoch_loss = self.train_one_epoch(idx_epoch, batch_size)
+
+            self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ", is_printed=True)
+
+            self.model.bilinear.reset_stats()
+            d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
+            self.cfg.logging(f"Stats dev: {self.model.bilinear.stats} ", is_printed=True)
+            self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
+
+            if d_f1 > self.best_f1_dev:
+                self.best_f1_dev = d_f1
+                torch.save(self.model.state_dict(), self.cfg.save_path)
+
+            self.cur_epoch += 1
+
+        self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
+        self.model.bilinear.reset_stats()
+        self.model.bilinear.set_more_logging(True)
+        t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
+        self.model.bilinear.set_more_logging(False)
+        self.cfg.logging(f"Stats test: {self.model.bilinear.stats} ", is_printed=True)
+        self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
+
+        return self.best_f1_dev
+
+    def train_old(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:
             self.train_set = train_set
 

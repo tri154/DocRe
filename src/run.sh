@@ -31,12 +31,13 @@ HIGH_LAYERS=2
 USE_MOE=True
 MOE_TYPE="sparse"
 NOISE_TYPE="uniform"
-NOISE_LIMIT=2
+NOISE_LIMIT=1
 SPARSE_TOPK=1
 NUM_EXPERTS=4
 NOISE_SCALE=0.5
 USE_IMPORTANCE_LOSS=True
 IMPORTANCE_WEIGHT=0.1
+USE_GATE_LOSS=True
 GATEL_WEIGHT=0.1
 
 USE_PSD=True
@@ -87,6 +88,7 @@ python main.py \
   --noise_scale $NOISE_SCALE \
   --use_importance_loss $USE_IMPORTANCE_LOSS \
   --importance_weight $IMPORTANCE_WEIGHT \
+  --use_gate_loss $USE_GATE_LOSS \
   --gatel_weight $GATEL_WEIGHT \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \

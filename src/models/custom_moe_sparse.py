@@ -5,35 +5,36 @@ from models.expert import Expert
 
 class CustomMoeSparse(nn.Module):
 
-    def __init__(self, cfg, num_experts, topk, in1_features, in2_features, out_features, noise_type=None, noise_limit=None):
+    def __init__(self, cfg, in1_features, in2_features, out_features, noise_type=None, noise_limit=None):
         super().__init__()
         self.cfg = cfg
-        self.num_experts = num_experts
-        self.topk = topk
-        if self.topk > 1:
-            raise Exception("currently support topk=1")
+        self.num_experts = self.cfg.num_experts
+        self.topk = self.cfg.topk
+        if self.topk > 1: raise Exception("currently support topk=1")
         self.noise_type = noise_type
 
         self.more_logging = False
-        self.stats = torch.zeros(num_experts)
+        self.stats = torch.zeros(self.num_experts)
 
         self.experts = nn.ModuleList([
-            Expert(in1_features, in2_features, out_features) for _ in range(num_experts)
+            Expert(in1_features, in2_features, out_features) for _ in range(self.num_experts)
         ])
 
-        self.gate = nn.Bilinear(in1_features, in2_features, num_experts)
+        self.gate = nn.Bilinear(in1_features, in2_features, self.num_experts)
 
         nn.init.zeros_(self.gate.weight)
         nn.init.zeros_(self.gate.bias)
 
         if noise_type == 'normal':
-            self.__add_noise = self.__add_trainable_normal_noise
-            self.noise = nn.Bilinear(in1_features, in2_features, num_experts)
+            self.noise = nn.Bilinear(in1_features, in2_features, self.num_experts)
             nn.init.zeros_(self.noise.weight)
             nn.init.zeros_(self.noise.bias)
-        elif noise_type == 'uniform':
-            self.__add_noise = self.__add_uniform_noise
-            self.noise_limit = noise_limit
+
+    def __add_noise(self, h_rep, t_rep, gate_logits, cur_epoch=None):
+        if self.cfg.noise_type == 'normal':
+            return self.__add_trainable_normal_noise(h_rep, t_rep, gate_logits)
+        elif self.cfg.noise_type == 'uniform':
+            return self.__add_uniform_noise(h_rep, t_rep , gate_logits, cur_epoch=cur_epoch)
 
     def forward(self, h_rep ,t_rep, labels, is_training=True, cur_epoch=None):
         gate_logits = self.gate(h_rep, t_rep)
@@ -66,7 +67,7 @@ class CustomMoeSparse(nn.Module):
         out = torch.stack(out)
 
         gate_loss = 0.0
-        if is_training:
+        if is_training and self.cfg.use_gate_loss:
             pred = torch.argmax(out, dim=-1)
             labels = torch.argmax(labels, dim=-1)
             mask = pred == labels
@@ -95,7 +96,7 @@ class CustomMoeSparse(nn.Module):
         return out, gates, gate_loss
 
     def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
-        if cur_epoch < self.noise_limit:
+        if cur_epoch < self.cfg.noise_limit:
             noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
             return gate_logits + noise_epsilon * noise_logits
         return gate_logits
