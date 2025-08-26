@@ -47,7 +47,7 @@ class Trainer:
         opt_gate = AdamW(grouped_lrs_gate, eps=self.cfg.adam_epsilon)
 
         # add 1 because warmup phase.
-        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch + 1)
+        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch + 2)
         sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
 
         return opt_main, sched_main, opt_gate, sched_gate
@@ -179,7 +179,7 @@ class Trainer:
         self.opt_main.zero_grad()
         self.opt_gate.zero_grad()
 
-        if current_epoch == 0: self.prepare_warmup()
+        if current_epoch == 0 or current_epoch == 1: self.prepare_warmup()
         else:                  self.prepare_fitting()
 
         np.random.shuffle(self.train_set)
@@ -200,7 +200,7 @@ class Trainer:
 
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
-                if current_epoch == 0:
+                if current_epoch == 0 or current_epoch == 1:
                     self.opt_main.step()
                     self.opt_gate.step()
 
