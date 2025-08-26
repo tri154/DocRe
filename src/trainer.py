@@ -189,6 +189,10 @@ class Trainer:
         total_loss = 0.0
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
             batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
+            # =======================
+            # print(batch_loss)
+            # input("debug")
+            # =======================
             if self.cfg.use_psd:
                 self.PSD_add_logits(batch_logits, batch_input['indices'])
             total_loss += batch_loss.item()
@@ -261,6 +265,13 @@ class Trainer:
     def train(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:
             self.train_set = train_set
+        # TEST
+        self.model.bilinear.reset_stats()
+        self.model.bilinear.set_more_logging(True)
+        t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
+        self.model.bilinear.set_more_logging(False)
+        self.cfg.logging(f"Stats test: {self.model.bilinear.stats} ", is_printed=True)
+        self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
         self.best_f1_dev = 0
         for idx_epoch in range(num_epoches):
