@@ -211,6 +211,10 @@ class Trainer:
                     self.opt_gate.zero_grad()
                     self.sched_main.step()
 
+        # logging
+        self.cfg.logging(f"Stats train (before rerouting): {self.model.bilinear.stats} ", is_printed=True)
+        self.model.bilinear.reset_stats()
+        # logging
         self.prepare_rerouting()
 
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
@@ -223,6 +227,10 @@ class Trainer:
                 self.opt_gate.zero_grad()
                 self.opt_main.zero_grad()
                 self.sched_gate.step()
+        # logging
+        self.cfg.logging(f"Stats train (after rerouting): {self.model.bilinear.stats} ", is_printed=True)
+        self.model.bilinear.reset_stats()
+        # logging
 
         return total_loss
 
@@ -261,7 +269,7 @@ class Trainer:
             self.model.bilinear.reset_stats()
             epoch_loss = self.train_one_epoch(idx_epoch, batch_size)
 
-            self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ", is_printed=True)
+            # self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ", is_printed=True)
 
             self.model.bilinear.reset_stats()
             d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
