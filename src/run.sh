@@ -15,6 +15,7 @@ MAX_GRAD_NORM=1.0
 
 NEW_LR=1e-4
 PRETRAINED_LR=1.472039003976042e-05
+GATE_LR=1e-4
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
@@ -30,14 +31,14 @@ HIGH_LAYERS=2
 
 USE_MOE=True
 MOE_TYPE="sparse"
-NOISE_TYPE="uniform"
+# NOISE_TYPE="uniform"
 # NOISE_LIMIT=1
 SPARSE_TOPK=1
 NUM_EXPERTS=4
 NOISE_SCALE=0.5
-USE_IMPORTANCE_LOSS=True
+# USE_IMPORTANCE_LOSS=True
 IMPORTANCE_WEIGHT=0.1
-USE_GATE_LOSS=True
+# USE_GATE_LOSS=True
 GATEL_WEIGHT=0.1
 
 USE_PSD=True
@@ -70,6 +71,7 @@ python main.py \
   --max_grad_norm $MAX_GRAD_NORM \
   --new_lr $NEW_LR \
   --pretrained_lr $PRETRAINED_LR \
+  --gate_lr $GATE_LR \
   --adam_epsilon $ADAM_EPSILON \
   --device $DEVICE \
   --transformer $TRANSFORMER \
@@ -82,12 +84,9 @@ python main.py \
   --use_moe $USE_MOE \
   --sparse_topk $SPARSE_TOPK \
   --moe_type $MOE_TYPE \
-  --noise_type $NOISE_TYPE \
   --num_experts $NUM_EXPERTS \
   --noise_scale $NOISE_SCALE \
-  --use_importance_loss $USE_IMPORTANCE_LOSS \
   --importance_weight $IMPORTANCE_WEIGHT \
-  --use_gate_loss $USE_GATE_LOSS \
   --gatel_weight $GATEL_WEIGHT \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
@@ -101,6 +100,9 @@ python main.py \
   --penalty_weight $PENALTY_WEIGHT
 
 
+  # --use_gate_loss $USE_GATE_LOSS \
+  # --use_importance_loss $USE_IMPORTANCE_LOSS \
+  # --noise_type $NOISE_TYPE \
   # --noise_limit $NOISE_LIMIT \
   # --β $BETA \
   # --η $ETA \

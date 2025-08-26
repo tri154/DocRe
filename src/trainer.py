@@ -17,7 +17,7 @@ class Trainer:
         self.tester = tester
         self.cur_epoch = 0
 
-        self.opt, self.sched = self.prepare_optimizer_scheduler()
+        self.opt_main, self.sched_main, self.opt_gate, self.sched_gate = self.prepare_optimizer_scheduler()
 
 
     # doc_data = {'doc_tokens': doc_tokens, # list of token id of the doc. single dimension single dimension.
@@ -31,17 +31,26 @@ class Trainer:
         for name, param in self.model.named_parameters():
             if 'transformer' in name:
                 grouped_params['pretrained_lr'].append(param)
+            elif 'gate' in name:
+                grouped_params['gate_lr'].append(param)
             else:
                 grouped_params['new_lr'].append(param)
 
-        grouped_lrs = [{'params': grouped_params[group], 'lr': lr} for group, lr in zip(['pretrained_lr', 'new_lr'], [self.cfg.pretrained_lr, self.cfg.new_lr])]
-        opt = AdamW(grouped_lrs, eps=self.cfg.adam_epsilon)
+        grouped_lrs_main = [{'params': grouped_params[group], 'lr': lr} for group, lr in zip(['pretrained_lr', 'new_lr'], [self.cfg.pretrained_lr, self.cfg.new_lr])]
+        opt_main = AdamW(grouped_lrs_main, eps=self.cfg.adam_epsilon)
 
         num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * self.cfg.num_epoch
         num_warmups = int(num_updates * self.cfg.warmup_ratio)
-        sched = get_linear_schedule_with_warmup(opt, num_warmups, num_updates)
+        sched_main = get_linear_schedule_with_warmup(opt_main, num_warmups, num_updates)
 
-        return opt, sched
+        grouped_lrs_gate = [{'params': grouped_params[group], 'lr': lr} for group, lr in zip(['gate_lr'], [self.cfg.gate_lr])]
+        opt_gate = AdamW(grouped_lrs_gate, eps=self.cfg.adam_epsilon)
+
+        # add 1 because warmup phase.
+        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch + 1)
+        sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
+
+        return opt_main, sched_main, opt_gate, sched_gate
 
 
     def prepare_batch(self, batch_size):
@@ -167,11 +176,11 @@ class Trainer:
     # new implement
     def train_one_epoch(self, current_epoch, batch_size):
         self.model.train()
-        self.opt.zero_grad()
-        # diff
+        self.opt_main.zero_grad()
+        self.opt_gate.zero_grad()
+
         if current_epoch == 0: self.prepare_warmup()
-        else: self.prepare_fitting()
-        # diff
+        else:                  self.prepare_fitting()
 
         np.random.shuffle(self.train_set)
 
@@ -180,13 +189,6 @@ class Trainer:
         total_loss = 0.0
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
             batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
-            # =====================
-
-            print(batch_loss)
-            input("DEBUG")
-            break
-
-            # =====================
             if self.cfg.use_psd:
                 self.PSD_add_logits(batch_logits, batch_input['indices'])
             total_loss += batch_loss.item()
@@ -194,22 +196,47 @@ class Trainer:
 
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
-                self.opt.step()
-                self.opt.zero_grad()
-                self.sched.step()
+                if current_epoch == 0:
+                    self.opt_main.step()
+                    self.opt_gate.step()
+
+                    self.opt_main.zero_grad()
+                    self.opt_gate.zero_grad()
+
+                    self.sched_main.step()
+                    self.sched_gate.step()
+                else:
+                    self.opt_main.step()
+                    self.opt_main.zero_grad()
+                    self.opt_gate.zero_grad()
+                    self.sched_main.step()
 
         self.prepare_rerouting()
-        # CONT: seperated optimizer, scheduler.
+
+        for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
+            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
+            (batch_loss / self.cfg.update_freq).backward()
+
+            if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
+                clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
+                self.opt_gate.step()
+                self.opt_gate.zero_grad()
+                self.opt_main.zero_grad()
+                self.sched_gate.step()
 
         return total_loss
 
     def prepare_warmup(self):
         # self.cfg.noise_limit = 1
+        for name, param in self.model.named_parameters():
+            param.requires_grad = True
         self.cfg.noise_type = 'uniform'
         self.cfg.use_importance_loss = True
         self.cfg.use_gate_loss = False
 
     def prepare_fitting(self):
+        for name, param in self.model.named_parameters():
+            param.requires_grad = True
         self.model.bilinear.toggle_gate_weight(False)
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = False
@@ -219,8 +246,6 @@ class Trainer:
         for name, param in self.model.named_parameters():
             param.requires_grad = False
         self.model.bilinear.toggle_gate_weight(True)
-        for name, param in self.model.named_parameters():
-            print(name, param.requires_grad)
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = False
         self.cfg.use_gate_loss = True

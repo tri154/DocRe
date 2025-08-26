@@ -13,3 +13,19 @@ frezze gate lai, khong noise, khong import loss, khong gate loss.
 1 epoch
 re-routing:
 freeze tat ca ngoai tru gate, khong noise, khong import loss, co gate loss.
+
+
+epoch = 0:
+	warmup:
+	toan bo nhan gradient
+
+	rerouting:
+	moi gate nhan gradient
+
+
+epoch != 0:
+	fitting:
+	ngoai tru gate nhan gradient
+
+	rerouting:
+	moi gate nhan gradient

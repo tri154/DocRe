@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument("--max_grad_norm", type=float, default=1.0)
     parser.add_argument("--new_lr", type=float, default=1e-4)
     parser.add_argument("--pretrained_lr", type=float, default=5e-5)
+    parser.add_argument("--gate_lr", type=float, default=1e-4)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
 
     parser.add_argument('--device', type=str, default='cuda:0')
@@ -48,7 +49,7 @@ def parse_args():
 
     parser.add_argument('--use_moe', type=str2bool, default=True)
     parser.add_argument('--moe_type', type=str, default="dense", help="dense or sparse.")
-    parser.add_argument('--noise_type', type=str, default="normal", help="normal or uniform for sparse currently.")
+    parser.add_argument('--noise_type', type=str, default="uniform", help="normal or uniform for sparse currently.")
     # parser.add_argument('--noise_limit', type=int, default=2, help="number of epoch add uniform noise.")
     parser.add_argument('--num_experts', type=int, default=4)
     parser.add_argument('--sparse_topk', type=int, default=1, help="topk for sparse moe. NOTE: hard code for 1.")
