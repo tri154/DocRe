@@ -50,3 +50,8 @@ Huong tiep theo:
 	+ tang so luong epoch warmup
 
 - Nhung ma truoc het chay thu num_experts = 2.
+
+
+Thu nghiem 2:
+voi experst = 2 thi no don vao chi 1 expert.
+--> co the phai lam de can bang epoch warmup hon

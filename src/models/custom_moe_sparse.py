@@ -96,8 +96,8 @@ class CustomMoeSparse(nn.Module):
 
         return out, gates, gate_loss
 
-    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2):
-        noise_logits = torch.rand(gate_logits.shape).to(gate_logits.device)
+    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1.0):
+        noise_logits = torch.rand_like(gate_logits).to(gate_logits.device)
         return gate_logits + noise_epsilon * noise_logits
 
     def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
