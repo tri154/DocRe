@@ -29,3 +29,24 @@ epoch != 0:
 
 	rerouting:
 	moi gate nhan gradient
+
+
+Ket qua:
+Nhin chung voi cac seed khac nhau thi phan bo train da hoi tu.
+
+Van de:
+- epoch dau chua can bang lam, van bi lech (co pattern giua cac seed)
+- pattern: [4, 1, 0, 0], 2 experts con lai khong duoc dung
+- diem khac biet lan chay dc diem cao vs diem thap:
++ diem cao: loss thap hon (1.2)
++ diem thap: loss cao hon (1.5)
+--> co ve la do hen xui, khong thay pattern dac biet nao khac.
+
+
+Huong tiep theo:
+- lam the nao de cho can bang epoch warmup:
+	+ tang importance_weight.
+	+ tang epsilon o noise.
+	+ tang so luong epoch warmup
+
+- Nhung ma truoc het chay thu num_experts = 2.
