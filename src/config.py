@@ -181,20 +181,27 @@ class Config:
         torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms(True, warn_only=True)
 
-    def logging(self, text, is_printed=False):
+    def logging(self, text, is_printed=False, print_time=False):
         if is_printed:
             print(text)
         with open(self.log_path, 'a') as file:
-            print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
+            if print_time:
+                print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
+            else:
+                print(text, file=file, flush=True)
 
-    def another_logging(self, text, is_printed=False):
+    def another_logging(self, text, is_printed=False, print_time=False):
         if is_printed:
             print(text)
         base, ext = os.path.splitext(self.log_path)
         stats_log_path = f"{base}_stats{ext}"
 
         with open(stats_log_path, 'a') as file:
-            print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
+            if print_time:
+                print(time.strftime("%Y %b %d %a, %H:%M:%S: ") + text, file=file, flush=True)
+            else:
+                print(text, file=file, flush=True)
+
 
     def log_config(self):
         self.logging("Configuration Settings:")
