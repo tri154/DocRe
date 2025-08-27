@@ -42,16 +42,27 @@ Van de:
 + diem thap: loss cao hon (1.5)
 --> co ve la do hen xui, khong thay pattern dac biet nao khac.
 
+Thu nghiem 2:
+voi experst = 2 thi no don vao chi 1 expert.
+--> co the phai lam de can bang epoch warmup hon
 
 Huong tiep theo:
 - lam the nao de cho can bang epoch warmup:
 	+ tang importance_weight.
 	+ tang epsilon o noise.
 	+ tang so luong epoch warmup
+- co nen rerouting trong warmup phase ?
+- them regulalization trong rerouting phase ?
 
-- Nhung ma truoc het chay thu num_experts = 2.
+
+Van de sau khi thu lam can bang hon:
+- o nhung epoch dau (warmup) thi du lieu chua duoc fit, nen nhung expert nao nhan nhieu sample (random) thi sau khi rerouting thuong se lay mat cac sample cua expert khac.
+VD: epoch 2/15 (warmup):
+Stats train (before rerouting): tensor([1339., 1351., 1197., 1272.])
+Stats train (after rerouting): tensor([3261.,  151.,   86., 1661.])
 
 
-Thu nghiem 2:
-voi experst = 2 thi no don vao chi 1 expert.
---> co the phai lam de can bang epoch warmup hon
+Thu nghiem:
+- tang so luong epoch ?
+- co nen rerouting trong warmup phase ?
+- them regulalization trong rerouting phase ?

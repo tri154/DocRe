@@ -16,6 +16,7 @@ class Trainer:
         self.train_set = train_set
         self.tester = tester
         self.cur_epoch = 0
+        self.warmup_phase = self.cfg.warmup_phase
 
         self.opt_main, self.sched_main, self.opt_gate, self.sched_gate = self.prepare_optimizer_scheduler()
 
@@ -46,8 +47,8 @@ class Trainer:
         grouped_lrs_gate = [{'params': grouped_params[group], 'lr': lr} for group, lr in zip(['gate_lr'], [self.cfg.gate_lr])]
         opt_gate = AdamW(grouped_lrs_gate, eps=self.cfg.adam_epsilon)
 
-        # add 1 because warmup phase.
-        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch + 2)
+        # add warmup phase.
+        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch + self.warmup_phase)
         sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
 
         return opt_main, sched_main, opt_gate, sched_gate
@@ -179,7 +180,7 @@ class Trainer:
         self.opt_main.zero_grad()
         self.opt_gate.zero_grad()
 
-        if current_epoch == 0 or current_epoch == 1: self.prepare_warmup()
+        if current_epoch < self.warmup_phase: self.prepare_warmup()
         else:                  self.prepare_fitting()
 
         np.random.shuffle(self.train_set)
@@ -200,7 +201,7 @@ class Trainer:
 
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
-                if current_epoch == 0 or current_epoch == 1:
+                if current_epoch < self.warmup_phase:
                     self.opt_main.step()
                     self.opt_gate.step()
 
@@ -219,6 +220,7 @@ class Trainer:
         self.cfg.logging(f"Stats train (before rerouting): {self.model.bilinear.stats} ", is_printed=True)
         self.model.bilinear.reset_stats()
         # logging
+
         self.prepare_rerouting()
 
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
@@ -265,13 +267,6 @@ class Trainer:
     def train(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:
             self.train_set = train_set
-        # TEST
-        self.model.bilinear.reset_stats()
-        self.model.bilinear.set_more_logging(True)
-        t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
-        self.model.bilinear.set_more_logging(False)
-        self.cfg.logging(f"Stats test: {self.model.bilinear.stats} ", is_printed=True)
-        self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
         self.best_f1_dev = 0
         for idx_epoch in range(num_epoches):

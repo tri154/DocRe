@@ -40,6 +40,7 @@ NOISE_SCALE=0.5
 IMPORTANCE_WEIGHT=0.1
 # USE_GATE_LOSS=True
 GATEL_WEIGHT=0.1
+WARMUP_PHASE=1
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -88,6 +89,7 @@ python main.py \
   --noise_scale $NOISE_SCALE \
   --importance_weight $IMPORTANCE_WEIGHT \
   --gatel_weight $GATEL_WEIGHT \
+  --warmup_phase $WARMUP_PHASE \
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \
