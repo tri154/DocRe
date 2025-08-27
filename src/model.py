@@ -8,6 +8,7 @@ from collections import deque
 from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.cnn import CNN
+from models.re import RE
 from loss import Loss
 
 class Model(nn.Module):
@@ -71,7 +72,8 @@ class Model(nn.Module):
             torch.nn.Tanh(),
         )
 
-        self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
+        # self.re_model = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
+        self.re_model = RE(emb_size // 2, self.cfg.num_rel)
 
         self.loss = Loss(cfg)
 
@@ -407,7 +409,7 @@ class Model(nn.Module):
             raise Exception("Need to re-define")
             # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
-        logits = self.bilinear(h_rep, t_rep)
+        logits = self.re_model(h_rep, t_rep)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
