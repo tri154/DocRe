@@ -14,7 +14,6 @@ MAX_GRAD_NORM=1.0
 NEW_LR=8e-5
 PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
-PATIENCE=-1
 
 DEVICE="cuda:0"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
@@ -70,7 +69,6 @@ for SEED in "${SEEDS[@]}"; do
     --new_lr $NEW_LR \
     --pretrained_lr $PRETRAINED_LR \
     --adam_epsilon $ADAM_EPSILON \
-  	--patience $PATIENCE \
     --device $DEVICE \
     --transformer $TRANSFORMER \
     --seq_process_type $SEQ_PROCESS_TYPE\

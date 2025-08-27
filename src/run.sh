@@ -16,7 +16,6 @@ MAX_GRAD_NORM=1.0
 NEW_LR=1e-4
 PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
-PATIENCE=5
 
 DEVICE="cuda:0"
 # DEVICE="cpu"
@@ -60,7 +59,6 @@ python main.py \
   --new_lr $NEW_LR \
   --pretrained_lr $PRETRAINED_LR \
   --adam_epsilon $ADAM_EPSILON \
-  --patience $PATIENCE\
   --device $DEVICE \
   --transformer $TRANSFORMER \
   --seq_process_type $SEQ_PROCESS_TYPE\

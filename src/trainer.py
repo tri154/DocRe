@@ -187,35 +187,27 @@ class Trainer:
         return total_loss
 
 
-    def train(self, num_epoches, batch_size, train_set=None, no_tqdm=False, patience=-1):
+    def train(self, num_epoches, batch_size, train_set=None, no_tqdm=False):
         if train_set is not None:
             self.train_set = train_set
 
         self.best_f1_dev = 0
-        patience_counter = 0
         for idx_epoch in range(num_epoches):
-            self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100)
+            self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100, is_printed=True)
 
             epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
 
             d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
 
-            self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.")
+            self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
 
             if d_f1 > self.best_f1_dev:
                 self.best_f1_dev = d_f1
                 torch.save(self.model.state_dict(), self.cfg.save_path)
-                patience_counter = 0
-            else:
-                patience_counter += 1
-                if patience_counter >= patience and patience > 0:
-                    self.cfg.logging("Early stopping triggered.")
-                    break
-
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
         t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
-        self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}")
+        self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
         return self.best_f1_dev

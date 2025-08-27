@@ -7,7 +7,6 @@ from collections import deque
 
 from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
-from models.rgat import RGAT
 from models.cnn import CNN
 from loss import Loss
 

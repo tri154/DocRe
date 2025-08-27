@@ -36,7 +36,6 @@ def parse_args():
     parser.add_argument("--new_lr", type=float, default=1e-4)
     parser.add_argument("--pretrained_lr", type=float, default=5e-5)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
-    parser.add_argument("--patience", type=int, default=-1)
 
 
     parser.add_argument('--device', type=str, default='cuda:0')
@@ -170,7 +169,7 @@ class Config:
         torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms(True, warn_only=True)
 
-    def logging(self, text, is_printed=True, print_time=False):
+    def logging(self, text, is_printed=False, print_time=False):
         if is_printed:
             print(text)
         with open(self.log_path, 'a') as file:
@@ -180,9 +179,9 @@ class Config:
                 print(text, file=file, flush=True)
 
     def log_config(self):
-        self.logging("Configuration Settings:")
+        self.logging("Configuration Settings:", is_printed=False)
         for key, value in sorted(self.__dict__.items()):
             # Avoid logging functions or modules
             if not key.startswith("__") and not callable(value):
-                self.logging(f"{key}: {value}")
-        self.logging("=" * 50)
+                self.logging(f"{key}: {value}", is_printed=False)
+        self.logging("=" * 50, is_printed=False)
