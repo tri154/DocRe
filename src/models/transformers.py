@@ -112,7 +112,7 @@ class Transformer(nn.Module):
         num_seg_per_doc = list()
         valids = list()
 
-        
+
         for did, num_token in enumerate(num_token_per_doc):
             if num_token <= self.max_num_tokens:
                 token_seqs.append(batch_token_seqs[did, :self.max_num_tokens])
@@ -169,7 +169,7 @@ class Transformer(nn.Module):
                 type = torch.cat([batch_token_types[did, start].repeat(self.start_token_len),
                                  batch_token_types[did, start:end],
                                  batch_token_types[did, end - 1].repeat(self.end_token_len)], dim=-1)
-                
+
                 token_seqs.append(sequence)
                 token_masks.append(mask)
                 token_types.append(type)
@@ -207,7 +207,7 @@ class Transformer(nn.Module):
                         sl = (self.start_token_len, self.start_token_len + num_valid)
                     else: #valid = 512
                         sl = (self.start_token_len, self.start_token_len + num_valid)
-                
+
                     emb = F.pad(token_embs[seg_id + i, sl[0]:sl[1]],
                                 pad=(0, 0, valid[0], max_doc_length - valid[1]))
                     att = F.pad(token_atts[seg_id + i, :, sl[0]:sl[1], sl[0]:sl[1]],
@@ -242,4 +242,3 @@ class Transformer(nn.Module):
             return self.forward_sd(batch_token_seqs, batch_token_masks, batch_token_types, stride=128)
         elif self.cfg.seq_process_type == 'o':
             return self.forward_o(batch_token_seqs, batch_token_masks, batch_token_types)
-

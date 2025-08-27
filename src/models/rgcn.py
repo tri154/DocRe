@@ -37,7 +37,7 @@ class RGCN(nn.Module):
         for layer in range(num_layers):
             input_dim = in_dim + type_dim if layer == 0 else hidden_dim
             self.convs.append(RGCNConv(input_dim, hidden_dim, num_relations, num_bases=self.num_bases))
-           
+
 
     def forward(self, x, node_type, edge_index, edge_type):
         """
@@ -54,4 +54,3 @@ class RGCN(nn.Module):
         if self.num_layers != 1:
             output.append(x)
         return output #first layer, and last layer
-

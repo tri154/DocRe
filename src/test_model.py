@@ -48,7 +48,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     cfg = Config(setup())
-    
+
     pre = Preprocessing(cfg)
     train_set, dev_set, test_set = pre.train_set, pre.dev_set, pre.test_set
     model = Model(cfg).to(cfg.device)
