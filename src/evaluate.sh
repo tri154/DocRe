@@ -36,12 +36,8 @@ SC_WEIGHT=0.3108995767362708
 
 RE_LOSS="CE"
 FOCAL_GAMMA=2.5
-BETA=1.0
-ETA=0.0
-T=1.0
 PENALTY_WEIGHT=0.01
 
-# SEEDS=(2004 1945 30 4 1975)
 SEEDS=(1920 1942 1975 1969 2004)
 
 for SEED in "${SEEDS[@]}"; do
@@ -84,10 +80,7 @@ for SEED in "${SEEDS[@]}"; do
     --use_sc $USE_SC \
     --sc_temp $SC_TEMP \
     --sc_weight $SC_WEIGHT \
-    --focal_gamma $FOCAL_GAMMA \
     --re_loss $RE_LOSS \
-    --β $BETA \
-    --η $ETA \
-    --T $T \
+    --focal_gamma $FOCAL_GAMMA \
     --penalty_weight $PENALTY_WEIGHT
 done

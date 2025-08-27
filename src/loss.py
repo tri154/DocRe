@@ -15,12 +15,12 @@ class Loss:
             # self.cal_loss = self.CE_focal_loss
             self.cal_loss = self.CE_focal_regularization
             self.predict = self.CE_pred
-        elif self.cfg.re_loss == 'sigmoidF1':
-            self.cal_loss = self.sigmoidF1_loss
-            self.predict = self.CE_pred
-        elif self.cfg.re_loss == 'softmaxF1':
-            self.cal_loss = self.softmaxF1_loss
-            self.predict = self.CE_pred
+        # elif self.cfg.re_loss == 'sigmoidF1':
+        #     self.cal_loss = self.sigmoidF1_loss
+        #     self.predict = self.CE_pred
+        # elif self.cfg.re_loss == 'softmaxF1':
+        #     self.cal_loss = self.softmaxF1_loss
+        #     self.predict = self.CE_pred
         else:
             raise Exception("Define loss function.")
 

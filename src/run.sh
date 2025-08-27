@@ -40,9 +40,6 @@ SC_WEIGHT=0.1509642367395748
 
 RE_LOSS="CE" # AT, CE, sigmoidF1, softmaxF1
 FOCAL_GAMMA=2.5
-BETA=1.0
-ETA=0.0
-T=1.0
 PENALTY_WEIGHT=0.01
 
 python main.py \
@@ -74,9 +71,6 @@ python main.py \
   --use_sc $USE_SC \
   --sc_temp $SC_TEMP \
   --sc_weight $SC_WEIGHT \
-  --focal_gamma $FOCAL_GAMMA \
   --re_loss $RE_LOSS \
-  --β $BETA \
-  --η $ETA \
-  --T $T \
+  --focal_gamma $FOCAL_GAMMA \
   --penalty_weight $PENALTY_WEIGHT
