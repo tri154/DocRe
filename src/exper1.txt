@@ -1,5 +1,5 @@
 Van de:
-- sharp in bilinear 256 -> 2.
+- sharp in bilinear 256 -> 2. (dang chay)
 - re implement contextual embedding.
 
 - try other type of re_model (trilinear)
