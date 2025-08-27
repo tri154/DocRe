@@ -47,8 +47,8 @@ class Trainer:
         grouped_lrs_gate = [{'params': grouped_params[group], 'lr': lr} for group, lr in zip(['gate_lr'], [self.cfg.gate_lr])]
         opt_gate = AdamW(grouped_lrs_gate, eps=self.cfg.adam_epsilon)
 
-        # add warmup phase.
-        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch + self.warmup_phase)
+        # modify logic here if modify training phase logic.
+        num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch - (self.warmup_phase - 1))
         sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
 
         return opt_main, sched_main, opt_gate, sched_gate
@@ -201,20 +201,14 @@ class Trainer:
 
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
-                if current_epoch < self.warmup_phase:
-                    self.opt_main.step()
-                    self.opt_gate.step()
+                self.opt_main.step()
+                self.opt_main.zero_grad()
+                self.opt_gate.zero_grad()
+                self.sched_main.step()
 
-                    self.opt_main.zero_grad()
-                    self.opt_gate.zero_grad()
-
-                    self.sched_main.step()
-                    self.sched_gate.step()
-                else:
-                    self.opt_main.step()
-                    self.opt_main.zero_grad()
-                    self.opt_gate.zero_grad()
-                    self.sched_main.step()
+        # warmup phase doesn't have rerouting, only the last warmup epoch.
+        if current_epoch < self.warmup_phase - 1:
+            return total_loss
 
         # logging
         self.cfg.logging(f"Stats train (before rerouting): {self.model.bilinear.stats} ", is_printed=True)
@@ -245,7 +239,7 @@ class Trainer:
         for name, param in self.model.named_parameters():
             param.requires_grad = True
         self.cfg.noise_type = 'uniform'
-        self.cfg.use_importance_loss = True
+        self.cfg.use_importance_loss = False
         self.cfg.use_gate_loss = False
 
     def prepare_fitting(self):

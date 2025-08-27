@@ -92,3 +92,7 @@ Truong hop khong cho ra pattern thi:
 Ket qua thu nghiem
 - tang so luong epoch --> diem giam, van ch ra pattern (4, 1) ngoai ra xuat hien pattern khac nua, it. Co the la do dac diem cua CDR.
 - thu nghiem: tat importance weight khi warmup --> co ve la importance weight o warmup phase khong co nhieu anh huong. (OK)
+
+
+Tat importance los strong warmup phase:
+- gate dung yen khong thay doi, train chi thuoc vao noise.
