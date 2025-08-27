@@ -90,14 +90,32 @@ Truong hop sau khi sua xong (1) ma no van cho ra pattern do thi:
 Truong hop khong cho ra pattern thi:
 	--> ung ho 'Van de 1'
 
-# chay lai warmup_phase = 2 (dang chay)
 
 Ket qua thu nghiem
 - tang so luong epoch --> diem giam, van ch ra pattern (4, 1) ngoai ra xuat hien pattern khac nua, it. Co the la do dac diem cua CDR.
 - thu nghiem: tat importance weight khi warmup --> co ve la importance weight o warmup phase khong co nhieu anh huong., tat di thay can bang hon (do uniform noise), (OK)
 
 - sua xong (1), (de nham warmup_phase = 1) (chi tham khao):
-	- 4 experts: mean F1 = 0.86803160908, van xuat hien pattern (4, 1), co xuat hien mot lan bi don.
+	- 4 experts: mean F1 = 0.86803160908, van xuat hien pattern (4, 1), co xuat hien mot lan bi don, detail:
+		don diem thap hon (4, 1).
+
 	- 2 experts: mean F1 = 0.86919950246, detail:
 		0.8636806011 (don), 0.8647561669 (don), 0.8690890670 (4, 1), 0.8720238209 (4, 1), 0.8764478564 (4, 1)
 		don thi bi thap, (4, 1) thi diem cao
+
+- chay lai warmup_phase = 2:
+	- 4 experts: mean F1 = 0.86952080728, detail
+	detail: 0.8662481308 (don), 0.8732530475 (don), 0.8653378487 (4, 1), 0.8726919889 (don), 0.8700730205 (don)
+
+	- 2 experts: mean F1 = 0.87102326154, detail:
+	0.8609206676 (4, 1), 0.8670916557 (don), 0.8754241467 (don), 0.8756073713 (don), 0.8760724664 (don)
+	don thi diem cao, (4, 1) thi diem thap
+
+# bo rerouting trong warmuphase, expect la se giai quyet duoc van de (1), nhung co ve lam no te hon (nhieu bi don hon):
+Nguyen nhan:
+	- (van de 2) co the la khong co nguyen nhan, --> rut ra ket luan luon
+	- con 1 van de nua:
+		- co the la do toc do optimize cua gate qua cao, bang chung la sau mot lan rerouting da lam thay doi toan bo.
+		# thu nghiem giam toc do:
+			- giam weight, giam lr.
+			- neu ma giai quyet duoc van de (1): --> rut ra ket luan 'cover duoc dataset', kiem dinh van de 2.

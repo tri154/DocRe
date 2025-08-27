@@ -206,14 +206,14 @@ class Trainer:
                 self.opt_gate.zero_grad()
                 self.sched_main.step()
 
-        # warmup phase doesn't have rerouting, only the last warmup epoch.
-        if current_epoch < self.warmup_phase - 1:
-            return total_loss
-
         # logging
         self.cfg.logging(f"Stats train (before rerouting): {self.model.bilinear.stats} ", is_printed=True)
         self.model.bilinear.reset_stats()
         # logging
+
+        # warmup phase doesn't have rerouting, only the last warmup epoch.
+        if current_epoch < self.warmup_phase - 1:
+            return total_loss
 
         self.prepare_rerouting()
 
