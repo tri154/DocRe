@@ -1,0 +1,5 @@
+Van de:
+- sharp in bilinear 256 -> 2.
+- re implement contextual embedding.
+
+- try other type of re_model (trilinear)
