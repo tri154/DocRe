@@ -131,10 +131,10 @@ Truong hop khong cho ra pattern thi:
 
 
 action:
-xem lai thoi diem train tat importance weight:
+xem lai thoi diem train tat importance weight: (DONE)
 	- setup luc do la: uniform noise, importance weight off, zeros init.
-		--> rerouting: khong noise, gate thi dung yen, do vay hien tuong don se tang len (expecting)
-doc lai infor
+		--> rerouting: khong noise, gate thi dung yen, do vay hien tuong don se tang len (expecting) (TRUE)
+doc lai infor (DONE)
 
 knowledge:
 	- mac du co the bi lech, nhung van random toi uu den (4, 1)

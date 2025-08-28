@@ -217,6 +217,8 @@ class Trainer:
             return total_loss
 
         self.prepare_rerouting()
+        if current_epoch == self.warmup_phase - 1:
+            self.cfg.noise_type = 'uniform'
 
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
             batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
@@ -239,8 +241,7 @@ class Trainer:
         # self.cfg.noise_limit = 1
         for name, param in self.model.named_parameters():
             param.requires_grad = True
-        # self.cfg.noise_type = 'uniform'
-        self.cfg.noise_type = None
+        self.cfg.noise_type = 'uniform'
         self.cfg.use_importance_loss = False
         self.cfg.use_gate_loss = False
 
