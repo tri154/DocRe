@@ -25,3 +25,4 @@ action:
 C0: init zero, tat importance weight, ap dung noise voi ca rerouting. (sua loi topk)
 C1: init zero, explicitly tie breaking (ap dung ca rerouting), khong noise.
 C2: tat init zero, co importance weight, khong noise
+C3: tat init zero, co importance weight, khong noise, importance weight ca rerouting.
