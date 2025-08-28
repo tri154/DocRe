@@ -119,3 +119,6 @@ Nguyen nhan:
 		# thu nghiem giam toc do:
 			- giam weight, giam lr.
 			- neu ma giai quyet duoc van de (1): --> rut ra ket luan 'cover duoc dataset', kiem dinh van de 2.
+			--> Thu giam toc do toi uu nhung khong cai thien.
+		- rerouting khong co noise:
+			- vi vay khi rerouting se co expert nhan duoc nhieu lan chon hon ca, dan den xac suat tang khong can doi.

@@ -181,7 +181,7 @@ class Trainer:
         self.opt_gate.zero_grad()
 
         if current_epoch < self.warmup_phase: self.prepare_warmup()
-        else:                  self.prepare_fitting()
+        else:                                 self.prepare_fitting()
 
         np.random.shuffle(self.train_set)
 
@@ -193,6 +193,7 @@ class Trainer:
             # =======================
             # print(batch_loss)
             # input("debug")
+            # break
             # =======================
             if self.cfg.use_psd:
                 self.PSD_add_logits(batch_logits, batch_input['indices'])
@@ -238,7 +239,8 @@ class Trainer:
         # self.cfg.noise_limit = 1
         for name, param in self.model.named_parameters():
             param.requires_grad = True
-        self.cfg.noise_type = 'uniform'
+        # self.cfg.noise_type = 'uniform'
+        self.cfg.noise_type = None
         self.cfg.use_importance_loss = False
         self.cfg.use_gate_loss = False
 

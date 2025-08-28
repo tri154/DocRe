@@ -21,7 +21,8 @@ class CustomMoeSparse(nn.Module):
 
         self.gate = nn.Bilinear(in1_features, in2_features, self.num_experts)
 
-        nn.init.zeros_(self.gate.weight)
+        # nn.init.zeros_(self.gate.weight)
+        nn.init.xavier_uniform_(self.gate.weight)
         nn.init.zeros_(self.gate.bias)
 
         if self.cfg.noise_type == 'normal':
