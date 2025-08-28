@@ -1,9 +1,17 @@
-# Install requirements
+# Requirements
+To install requirements:
 ```bash
 pip install -r requirements.txt
 ```
 # Training:
+Move to `src` directory:
 ```bash
 cd src
-bash run.sh
 ```
+To train the model on dataset CDR, GDA and BioRed and, run this command:
+```bash
+bash evaluate_cdr.sh
+bash evaluate_gda.sh
+bash evaluate_biored.sh
+```
+Each script trains the model in 5 seeds, the output is saved in `src/logs` directory.
