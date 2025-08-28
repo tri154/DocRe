@@ -22,6 +22,6 @@ Stats train (before rerouting): tensor([4185.,  974.])
 
 
 action:
-C0: init zero, tat importance weight, ap dung noise voi ca rerouting.
+C0: init zero, tat importance weight, ap dung noise voi ca rerouting. (sua loi topk)
 C1: init zero, explicitly tie breaking (ap dung ca rerouting), khong noise.
 C2: tat init zero, co importance weight, khong noise
