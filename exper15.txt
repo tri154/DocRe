@@ -122,3 +122,5 @@ Nguyen nhan:
 			--> Thu giam toc do toi uu nhung khong cai thien.
 		- rerouting khong co noise:
 			- vi vay khi rerouting se co expert nhan duoc nhieu lan chon hon ca, dan den xac suat tang khong can doi.
+			--> thu xavior init, van bi lech.
+			--> thu tat weight init zero.
