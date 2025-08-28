@@ -241,8 +241,8 @@ class Trainer:
         # self.cfg.noise_limit = 1
         for name, param in self.model.named_parameters():
             param.requires_grad = True
-        self.cfg.noise_type = 'uniform'
-        self.cfg.use_importance_loss = False
+        self.cfg.noise_type = None
+        self.cfg.use_importance_loss = True
         self.cfg.use_gate_loss = False
 
     def prepare_fitting(self):
