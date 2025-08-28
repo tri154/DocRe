@@ -14,4 +14,4 @@ bash evaluate_cdr.sh
 bash evaluate_gda.sh
 bash evaluate_biored.sh
 ```
-Each script trains the model in 5 seeds, the output is saved in `src/logs` directory, make sure to clear the `src/logs` and 'src/outputs' before training on different datasets.
+Each script trains the model in 5 seeds, the output is saved in `src/logs` directory, make sure to clear the `src/logs` and `src/outputs` before training on different datasets.
