@@ -1,0 +1,16 @@
+ly giai pattern (4, 1)
+
+voi cai dat: (phien ban 2)
+	- tat import loss, co uniform noise, co init weight zero,
+ 	--> khi rerouting khong co noise, --> topk picks khong random.
+	- o epoch dau tien, gate khong duoc train, weight dung yen.
+	- den khi rerouting, do khong co noise, topk pick mot cach khong ngau nhien
+	--> co the la nguyen nhan pattern (4, 1)
+
+Nhung thay doi so voi phien ban tren;
+Sau do thi nghi la do toc do hoi tu nhanh: giam lr, giam gatel_weight (ko hieu qua)
+- co thu thay doi init weight xavior, tat uniform noise (ko hieu qua trong can bang).
+- co thu tat init weight zero, tat uniform noise. (van bi don) do init ban dau khong cho ra
+ket qua can bang
+epoch 0/15 =====================
+Stats train (before rerouting): tensor([4185.,  974.])

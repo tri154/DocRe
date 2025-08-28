@@ -32,11 +32,12 @@ epoch != 0:
 
 
 Ket qua:
-Nhin chung voi cac seed khac nhau thi phan bo train da hoi tu.
+Nhin chung voi cac seed khac nhau thi phan bo train da hoi tu. (4, 1)
 
 Van de:
 - epoch dau chua can bang lam, van bi lech (co pattern giua cac seed)
 - pattern: [4, 1, 0, 0], 2 experts con lai khong duoc dung
+
 - diem khac biet lan chay dc diem cao vs diem thap:
 + diem cao: loss thap hon (1.2)
 + diem thap: loss cao hon (1.5)
@@ -53,9 +54,9 @@ Huong tiep theo:
 	+ tang epsilon o noise.
 	+ tang so luong epoch warmup
 - co nen rerouting trong warmup phase ?
-- them regulalization trong rerouting phase ?
+- them regularization trong rerouting phase ?
 
-Tat importance los strong warmup phase:
+Tat importance loss trong warmup phase:
 - gate dung yen khong thay doi, train chi thuoc vao noise.
 
 # CDR bi van de:
@@ -75,20 +76,6 @@ Stats train (after rerouting): tensor([3261.,  151.,   86., 1661.])
 	khong co nhieu khac biet:
 		- co the do ban dau init weight = zero nen CV cho ra output rat be (cac vi tri trong gate khong khac nhau nhieu (1.0 * uniform))
 	--> thu nghiem: tat importance weight khi warmup.
-
-
-Thu nghiem:
-
-- Mot so seed van cho ra pattern (4, 1) voi n_experts = 2
-- (2) lieu cai pattern la do 'Van de 1' gay ra hay la do no thuc su cover duoc pattern cua dataset.
--->
-	- co nen rerouting trong warmup phase (nguyen nhan cua 'Van de 1')? (1)
-- them regulalization trong rerouting phase ? (prevent gate overfitting)
-
-Truong hop sau khi sua xong (1) ma no van cho ra pattern do thi:
-	--> ung ho 'cover duoc pattern cua dataset'
-Truong hop khong cho ra pattern thi:
-	--> ung ho 'Van de 1'
 
 
 Ket qua thu nghiem
@@ -123,4 +110,31 @@ Nguyen nhan:
 		- rerouting khong co noise:
 			- vi vay khi rerouting se co expert nhan duoc nhieu lan chon hon ca, dan den xac suat tang khong can doi.
 			--> thu xavior init, van bi lech.
-			--> thu tat weight init zero.
+			--> thu tat weight init zero (dang chay).
+				: van khong the dat deu luc ban dau, van dan den lech cac epoch sau.
+
+Thu nghiem:
+
+- Mot so seed van cho ra pattern (4, 1) voi n_experts = 2
+- (2) lieu cai pattern la do 'Van de 1' gay ra hay la do no thuc su cover duoc pattern cua dataset.
+-->
+	- co nen rerouting trong warmup phase (nguyen nhan cua 'Van de 1')? (1)
+
+Truong hop sau khi sua xong (1) ma no van cho ra pattern do thi:
+	--> ung ho 'cover duoc pattern cua dataset'
+Truong hop khong cho ra pattern thi:
+	--> ung ho 'Van de 1'
+
+- warmup phase: tat noise, init weight zero,
+- explicitly tie breaking.
+- them regulalization trong rerouting phase ? (prevent gate overfitting)
+
+
+action:
+xem lai thoi diem train tat importance weight:
+	- setup luc do la: uniform noise, importance weight off, zeros init.
+		--> rerouting: khong noise, gate thi dung yen, do vay hien tuong don se tang len (expecting)
+doc lai infor
+
+knowledge:
+	- mac du co the bi lech, nhung van random toi uu den (4, 1)
