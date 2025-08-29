@@ -5,11 +5,12 @@ Seed 1975:0.8699855208
 Seed 2004: 0.8670238256
 
 Van de:
-- sharp in bilinear 256 -> 2. (dang chay)
 - rewrite sc_loss.
+- rewrite logic regularization o biored.
 - re implement contextual embedding.
 
 - try other type of re_model (trilinear)
 
 Thu nghiem:
 - softer bilinear (not good)
+- sharp in bilinear 256 -> 2. (not good)
