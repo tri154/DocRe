@@ -9,16 +9,21 @@ class RE(nn.Module):
             nn.Linear(input_dim, input_dim // 2),
             nn.LayerNorm(input_dim // 2),
             nn.Tanh(),
-            nn.Linear(input_dim // 2, input_dim // 4)
+
+            nn.Linear(input_dim // 2, input_dim // 4),
+            nn.LayerNorm(input_dim // 4),
+            torch.nn.Tanh()
         )
         self.w_t = nn.Sequential(
             nn.Linear(input_dim, input_dim // 2),
             nn.LayerNorm(input_dim // 2),
             nn.Tanh(),
-            nn.Linear(input_dim // 2, input_dim // 4)
+
+            nn.Linear(input_dim // 2, input_dim // 4),
+            nn.LayerNorm(input_dim // 4),
+            torch.nn.Tanh()
         )
         self.bilinear = nn.Bilinear(input_dim // 4, input_dim // 4, output_dim)
-
 
     def forward(self, h, t):
         h_rep = self.w_h(h)
