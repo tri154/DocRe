@@ -26,3 +26,18 @@ C0: init zero, tat importance weight, ap dung noise voi ca rerouting. (sua loi t
 C1: init zero, explicitly tie breaking (ap dung ca rerouting), khong noise.
 C2: tat init zero, co importance weight, khong noise
 C3: tat init zero, co importance weight, khong noise, importance weight ca rerouting.
+
+
+Ket qua:
+C2: F1 mean: 0.8721285343,
+Nhan xet:
+- importance weight chua lam viec hieu qua lam.
+	--> tang weight cua importance weight len.
+- xot lai mot seed ma hoi tu chua on.
+	+ cu the la: den epoch 8 van rerouting nhieu (diem thap).
+	--> tang toc do hoi tu len.
+- thu voi so luong experst khac.
+	+ 2 experts
+	+ 3 experts
+
+C3: F1 mean: 0.87112383842, (tam gac lai)
