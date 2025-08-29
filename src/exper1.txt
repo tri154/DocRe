@@ -1,5 +1,9 @@
 Van de:
 - sharp in bilinear 256 -> 2. (dang chay)
+- rewrite sc_loss.
 - re implement contextual embedding.
 
 - try other type of re_model (trilinear)
+
+Thu nghiem:
+- softer bilinear (not good)
