@@ -33,11 +33,22 @@ C2: F1 mean: 0.8721285343,
 Nhan xet:
 - importance weight chua lam viec hieu qua lam.
 	--> tang weight cua importance weight len.
+	--> tang warmup_phase
+	--> doi importance weight tu CV sang entropy.
 - xot lai mot seed ma hoi tu chua on.
 	+ cu the la: den epoch 8 van rerouting nhieu (diem thap).
 	--> tang toc do hoi tu len.
 - thu voi so luong experst khac.
-	+ 2 experts
+	+ 2 experts (bi don)
 	+ 3 experts
 
 C3: F1 mean: 0.87112383842, (tam gac lai)
+
+
+Thu nghiem:
+	--> tang weight cua importance weight len.
+	weight = 0.1: van con hien tuong bi 0, phan lon la do initialize anh huong lon.
+	weight = 0.5: (dang chay)
+
+	--> 2 experts: (bi don)
+	--> 3 experts: (dang chay)
