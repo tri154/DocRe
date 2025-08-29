@@ -8,7 +8,6 @@ from collections import deque
 from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.cnn import CNN
-from models.re import RE
 from loss import Loss
 
 class Model(nn.Module):
@@ -72,8 +71,7 @@ class Model(nn.Module):
             torch.nn.Tanh(),
         )
 
-        # self.re_model = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
-        self.re_model = RE(emb_size // 2, self.cfg.num_rel)
+        self.re_model = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
 
         self.loss = Loss(cfg)
 

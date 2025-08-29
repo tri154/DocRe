@@ -1,3 +1,9 @@
+Seed 1920: 0.8640394211
+Seed 1942: 0.8733750582
+Seed 1969: 0.8860882521
+Seed 1975:0.8699855208
+Seed 2004: 0.8670238256
+
 Van de:
 - sharp in bilinear 256 -> 2. (dang chay)
 - rewrite sc_loss.
