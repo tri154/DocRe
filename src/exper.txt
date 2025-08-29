@@ -1,0 +1,6 @@
+biored train with same hyper as cdr:
+	- 15 epochs, mean F1= 0.70558898896
+	- 30 epochs, mean F1= 0.71797076024
+biored train with optuna hper:
+	- 15 epochs, mean F1= (dang chay)
+	- 30 epochs. mean F1= (dang chay)
