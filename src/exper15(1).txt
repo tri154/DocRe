@@ -48,7 +48,10 @@ C3: F1 mean: 0.87112383842, (tam gac lai)
 Thu nghiem:
 	--> tang weight cua importance weight len.
 	weight = 0.1: van con hien tuong bi 0, phan lon la do initialize anh huong lon.
-	weight = 0.5: (dang chay)
+	weight = 0.5:
+		new best02, mean F1 = 0.8740161419, hien tuong don co giam, hien tuong 0 co giam.
+	weight = 0.75: (dang chay)
 
-	--> 2 experts: (bi don)
-	--> 3 experts: (dang chay)
+
+	--> 2 experts: (bi don) (importance weight nhu cu)
+	--> 3 experts: (bi don) (importance weight nhu cu)
