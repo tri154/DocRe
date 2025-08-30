@@ -60,5 +60,8 @@ Thu nghiem:
 		- import_weight=0.5, 3 warmup_phase mean F1 = 0.87029653788, nhung deu hon.
 
 	--> increase epoch as increase warmup_phase:
-		- 17 epochs, 3 warmup_phase, mean F1 = 0.87203885316, having one outlier: 0.8495313525
-		- 18 epochs, 4 warmup_phase, mean F1 = (dang chay)
+		- 17 epochs, 3 warmup_phase, mean F1 = 0.87203885316, having one outlier: 0.8495313525, co the boi vi it makes too balance so that makes rerouting switching suddenly.
+		--> decrease import weight
+		- 18 epochs, 4 warmup_phase, mean F1 = (tut diem)
+	--> 18 epochs, 3 warmup_phase, 0.5 w (dang chay)
+	--> 17 epochs, 3 warmup_phase, 0.35 w (dang chay)
