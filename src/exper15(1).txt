@@ -63,5 +63,22 @@ Thu nghiem:
 		- 17 epochs, 3 warmup_phase, mean F1 = 0.87203885316, having one outlier: 0.8495313525, co the boi vi it makes too balance so that makes rerouting switching suddenly.
 		--> decrease import weight
 		- 18 epochs, 4 warmup_phase, mean F1 = (tut diem)
-	--> 18 epochs, 3 warmup_phase, 0.5 w (dang chay)
-	--> 17 epochs, 3 warmup_phase, 0.35 w (dang chay)
+
+
+	--> 17 epochs, 3 warmup_phase, 0.35 w, mean F1=0.8655395627
+	hien tuong: diem te
+	- trong giai doand warmup da bi don 0, --> do do importance weight ko co tac dung.
+	seed1: bi thay doi nhe, don 0 warmup, diem OK
+	seed2: bi thay doi nhe, don 0 warmup, diem OK
+	seed3: bi thay doi nang, don 0 warmup, diem te
+	seed4: bi thay doi trung binh, khong don 0 warmup, diem ok
+	seed5: bi thay doi nhe, co hoi tu ve cuoi., don 0 warmup, diem OK
+		--> 2 cai minimal, 1 la can bang, 2 la dua thang nho nhat ve 0 tu do chi con 3 thang. --> ly giai tai sao lai bi hut mat nhu vay
+			--> can thiet: giai phap: sua lai logic cua importance loss.
+
+	--> 18 epochs, 3 warmup_phase, 0.5 w, mean F1 = 0.8679467678
+	hien tuong: diem te
+	--> do on dinh cua gate trong rerouting.
+
+	hien tuong: diem tot
+	--> khong can bang, nhung khi train on dinh hon.

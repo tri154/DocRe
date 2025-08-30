@@ -46,12 +46,12 @@ class CustomMoeSparse(nn.Module):
         gate_probs = F.softmax(gate_logits, dim=-1)
         top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
 
-        zeros = torch.zeros_like(gate_probs, requires_grad=True, device=gate_probs.device)
-        gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
+        # zeros = torch.zeros_like(gate_probs, requires_grad=True, device=gate_probs.device)
+        # gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
 
         if self.more_logging:
             self.cfg.another_logging(f"{gate_probs }")
-        temp = F.one_hot(torch.argmax(gates.detach(), dim=-1), num_classes=gates.shape[-1]).int()
+        temp = F.one_hot(torch.argmax(gate_probs.detach(), dim=-1), num_classes=gate_probs.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
         n_sample = h_rep.shape[0]
@@ -95,7 +95,7 @@ class CustomMoeSparse(nn.Module):
 
             gate_loss = positive_loss + negative_loss
 
-        return out, gates, gate_loss
+        return out, gate_probs, gate_loss
 
     def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=0.1):
         noise_logits = torch.rand_like(gate_logits).to(gate_logits.device)
