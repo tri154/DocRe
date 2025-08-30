@@ -32,8 +32,8 @@ Ket qua:
 C2: F1 mean: 0.8721285343,
 Nhan xet:
 - importance weight chua lam viec hieu qua lam.
-	--> tang weight cua importance weight len.
-	--> tang warmup_phase
+	--> tang weight cua importance weight len. (DONE)
+	--> tang warmup_phase (DONE)
 	--> doi importance weight tu CV sang entropy.
 - xot lai mot seed ma hoi tu chua on.
 	+ cu the la: den epoch 8 van rerouting nhieu (diem thap).
@@ -60,4 +60,5 @@ Thu nghiem:
 		- import_weight=0.5, 3 warmup_phase mean F1 = 0.87029653788, nhung deu hon.
 
 	--> increase epoch as increase warmup_phase:
-		- 17 epochs, 3 warmup_phase, (dang chay)
+		- 17 epochs, 3 warmup_phase, mean F1 = 0.87203885316, having one outlier: 0.8495313525
+		- 18 epochs, 4 warmup_phase, mean F1 = (dang chay)
