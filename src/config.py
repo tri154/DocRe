@@ -60,9 +60,10 @@ def parse_args():
     parser.add_argument('--re_loss', type=str, default='AT')
     parser.add_argument('--focal_gamma', type=float, default=2.5, help="For AT and CE focal loss.")
     parser.add_argument('--penalty_weight', default=1.0, type=float, help="For regularization, sigmoidF1, softmaxF1.")
-    # parser.add_argument('--β', type=float, default=1, help="For sigmoidF1, =1 for normal sigmoid.")
-    # parser.add_argument('--η', type=float, default=0, help="For sigmoidF1, =0 for normal sigmoid.")
-    # parser.add_argument('--T', type=float, default=1.0, help="For softmaxF1, =1 for normal softmax.")
+    parser.add_argument('--β', type=float, default=1, help="For sigmoidF1, =1 for normal sigmoid.")
+    parser.add_argument('--η', type=float, default=0, help="For sigmoidF1, =0 for normal sigmoid.")
+    parser.add_argument('--T', type=float, default=1.0, help="For softmaxF1, =1 for normal softmax.")
+    parser.add_argument('--patience', type=float, default=1.0, help="For softmaxF1, =1 for normal softmax.")
 
     args = parser.parse_args()
 
