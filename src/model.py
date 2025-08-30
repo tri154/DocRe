@@ -404,8 +404,7 @@ class Model(nn.Module):
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
-            raise Exception("Need to re-define")
-            # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
+            sc_loss = self.loss.SC_loss(cnn_feat, batch_labels)
 
         logits = self.bilinear(h_rep, t_rep)
 
