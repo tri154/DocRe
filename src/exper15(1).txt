@@ -82,3 +82,10 @@ Thu nghiem:
 
 	hien tuong: diem tot
 	--> khong can bang, nhung khi train on dinh hon.
+
+
+
+THU NGHIEM:
+- sua lai logic cua importance loss
+	--> voi setup cua SOTA (dang chay)
+	--> voi setup cua gan SOTA (dang chay)
