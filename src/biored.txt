@@ -1,3 +1,4 @@
 biored:
 phase=3, 30 eps, mean F1 = 0.7004299176, 3/5 bi don
 phase=3, 15 eps, mean F1 = (dang chay)
+phase=3, 15 eps, update_freq=2, mean F1 = (dang chay)
