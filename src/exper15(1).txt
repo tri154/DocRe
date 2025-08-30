@@ -52,9 +52,12 @@ Thu nghiem:
 		new best02, mean F1 = 0.8740161419, hien tuong don co giam, hien tuong 0 co giam.
 	weight = 0.75:
 		mean F1 = 0.86713445188 (giam)
-	weight = 0.6: (dang chay)
+	weight = 0.6: mean F1 = 0.86975291968 (giam)
 
 	--> best weight: 0.5
 
 	--> thu increase warmup_phase:
-		- import_weight=0.5, 3 warmup_phase (dang chay)
+		- import_weight=0.5, 3 warmup_phase mean F1 = 0.87029653788, nhung deu hon.
+
+	--> increase epoch as increase warmup_phase:
+		- 17 epochs, 3 warmup_phase, (dang chay)
