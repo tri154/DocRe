@@ -105,8 +105,9 @@ class CustomMoeSparse(nn.Module):
 
     def forward_dispatch(self, h_rep, t_rep, top_indices, top_logits):
         n_sample = h_rep.shape[0]
+        device = h_rep.device
 
-        zeros = torch.zeros((n_sample, self.num_experts), device=h_rep.device)
+        zeros = torch.zeros((n_sample, self.num_experts), device=device)
         gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
 
         row, col = (gates != 0).T.nonzero(as_tuple=True)
@@ -133,7 +134,7 @@ class CustomMoeSparse(nn.Module):
         out = list()
         for exp_id in range(self.num_experts):
             if exp_id not in exp2sample:
-                out.append(torch.tensor([]))
+                out.append(torch.tensor([], device=device))
                 continue
             sample_ids = exp2sample[exp_id]
             h = h_rep[sample_ids]
