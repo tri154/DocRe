@@ -1,6 +1,7 @@
 try importance weight even in the rerouting phase:
 	--> voi setup cua SOTA, mean F1=0.87244811056, pretty balance, however still have a low outlier.
-	--> voi setup cua SOTA, tang epoch, mean F1= (dang chay)
+	--> voi setup cua SOTA, tang epoch, mean F1=0.86954563856, outlier 1969
+	--> voi setup cua SOTA, use dispatch code, mean F1=(dang chay)
 
 option 3:
 	--> kha can bang
