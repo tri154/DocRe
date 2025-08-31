@@ -59,6 +59,7 @@ def parse_args():
     parser.add_argument('--use_gate_loss', type=str2bool, default=True)
     parser.add_argument('--gatel_weight', type=float, default=0.1, help="for gate loss weight.")
     parser.add_argument('--warmup_phase', type=int, default=2, help="number of warmup epoch.")
+    parser.add_argument('--use_dispatch', type=str2bool, default=False, help="dispatch moe")
 
     parser.add_argument('--use_psd', type=str2bool, default=True)
     parser.add_argument('--lower_temp', type=float, default=2.0)

@@ -41,6 +41,7 @@ IMPORTANCE_WEIGHT=0.1
 # USE_GATE_LOSS=True
 GATEL_WEIGHT=0.1
 WARMUP_PHASE=1
+USE_DISPATCH=False
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -90,6 +91,7 @@ python main.py \
   --importance_weight $IMPORTANCE_WEIGHT \
   --gatel_weight $GATEL_WEIGHT \
   --warmup_phase $WARMUP_PHASE \
+  --use_dispatch $USE_DISPATCH\
   --use_psd $USE_PSD \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \
