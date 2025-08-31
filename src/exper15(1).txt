@@ -92,7 +92,8 @@ THU NGHIEM:
 
 try warmup phase = 1, after importance loss being stable. (dung do khong can bang, bi don 0)
 try importance weight even in the rerouting phase:
-	--> voi setup cua SOTA, mean F1 = (dang chay)
+	--> voi setup cua SOTA, mean F1=0.87244811056, pretty balance, however still have a low outlier.
+	--> voi setup cua SOTA, tang epoch, mean F1= (dang chay)
 
 implement dispatch code:
 	- running with setup of best hyper, expecting mean F1 = 0.87162401676,
