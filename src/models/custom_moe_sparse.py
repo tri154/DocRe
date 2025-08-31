@@ -38,6 +38,7 @@ class CustomMoeSparse(nn.Module):
         else:
             raise Exception("not a noise type.")
 
+
     def forward(self, h_rep ,t_rep, labels, is_training=True, cur_epoch=None):
         gate_logits = self.gate(h_rep, t_rep)
         if is_training and self.cfg.noise_type is not None:
@@ -54,19 +55,8 @@ class CustomMoeSparse(nn.Module):
         temp = F.one_hot(torch.argmax(gate_probs.detach(), dim=-1), num_classes=gate_probs.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
-        n_sample = h_rep.shape[0]
-        out = list()
-        for sample_id in range(n_sample):
-            expert_ids = top_indices[sample_id]
-            sample_out = torch.stack([self.experts[i](h_rep[sample_id], t_rep[sample_id]) for i in expert_ids])
-
-            sample_gate = top_logits[sample_id]
-            sample_gate = sample_gate.detach() # gate weight not involved in main loss.
-            sample_gate = sample_gate / sample_gate.sum(dim=-1, keepdim=True)
-
-            sample_out = sample_gate @ sample_out
-            out.append(sample_out)
-        out = torch.stack(out)
+        # out = self.forward_not_dispatch(h_rep, t_rep, top_indices, top_logits)
+        out = self.forward_dispatch(h_rep, t_rep, top_indices, top_logits)
 
         gate_loss = 0.0
         if is_training and self.cfg.use_gate_loss:
@@ -96,6 +86,77 @@ class CustomMoeSparse(nn.Module):
             gate_loss = positive_loss + negative_loss
 
         return out, gate_probs, gate_loss
+
+    def forward_not_dispatch(self, h_rep, t_rep, top_indices, top_logits):
+        n_sample = h_rep.shape[0]
+        out = list()
+        for sample_id in range(n_sample):
+            expert_ids = top_indices[sample_id]
+            sample_out = torch.stack([self.experts[i](h_rep[sample_id], t_rep[sample_id]) for i in expert_ids])
+
+            sample_gate = top_logits[sample_id]
+            sample_gate = sample_gate.detach() # gate weight not involved in main loss.
+            sample_gate = sample_gate / sample_gate.sum(dim=-1, keepdim=True)
+
+            sample_out = sample_gate @ sample_out
+            out.append(sample_out)
+        out = torch.stack(out)
+        return out
+
+    def forward_dispatch(self, h_rep, t_rep, top_indices, top_logits):
+        n_sample = h_rep.shape[0]
+
+        zeros = torch.zeros((n_sample, self.num_experts), device=h_rep.device)
+        gates = zeros.scatter(dim=1, index=top_indices, src=top_logits)
+
+        row, col = (gates != 0).T.nonzero(as_tuple=True)
+        expert_ids, counts = torch.unique_consecutive(row, return_counts=True)
+        sample_per_expert = torch.split(col, counts.tolist())
+
+        # dict to dispatch
+        exp2sample = dict()
+        for index, exp_id in enumerate(expert_ids.tolist()):
+            exp2sample[exp_id] = sample_per_expert[index]
+
+        # revert to combine
+        revert = list()
+        for exp_id in range(self.num_experts):
+            if exp_id not in exp2sample:
+                revert.append(None)
+                continue
+            list_sample = exp2sample[exp_id].tolist()
+            idx = list(range(len(list_sample)))
+            temp = dict(zip(list_sample, idx))
+            revert.append(temp)
+
+        # dispatch
+        out = list()
+        for exp_id in range(self.num_experts):
+            if exp_id not in exp2sample:
+                out.append(torch.tensor([]))
+                continue
+            sample_ids = exp2sample[exp_id]
+            h = h_rep[sample_ids]
+            t = t_rep[sample_ids]
+            out.append(self.experts[exp_id](h, t))
+
+        num_sample_per_expert = torch.tensor([0] + [len(i) for i in out]).cumsum(dim=-1)
+        out = torch.cat(out, dim=0)
+
+        # combine
+        index = list()
+        for sample_id, expert_ids in enumerate(top_indices):
+            position = list()
+            for exid in expert_ids.tolist():
+                position.append(num_sample_per_expert[exid] + revert[exid][sample_id])
+            index.append(position)
+        index = torch.tensor(index)
+
+        temp = out[index]
+        top_logits_norm = top_logits.detach()
+        top_logits_norm = top_logits_norm / top_logits_norm.sum(dim=-1, keepdim=True)
+        res = torch.bmm(top_logits_norm.unsqueeze(1), temp).squeeze(1)
+        return res
 
     def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=0.1):
         noise_logits = torch.rand_like(gate_logits).to(gate_logits.device)
