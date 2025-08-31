@@ -258,7 +258,7 @@ class Trainer:
             param.requires_grad = False
         self.model.bilinear.toggle_gate_weight(True)
         self.cfg.noise_type = None
-        self.cfg.use_importance_loss = False
+        self.cfg.use_importance_loss = True
         self.cfg.use_gate_loss = True
 
     def train(self, num_epoches, batch_size, train_set=None):
