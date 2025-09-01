@@ -7,3 +7,7 @@ phase=3, 15 eps, update_freq=2, mean F1 = te
 
 tang warmup phase:
 	- tam thoi cho cdr on dinh
+
+
+chay lai voi:
+	- redefine importance loss, scaled gate loss with best hyper setup: (dang chay)
