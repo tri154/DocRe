@@ -91,5 +91,6 @@ THU NGHIEM:
 	--> voi setup cua gan SOTA, mean F1, diem te
 
 try warmup phase = 1, after importance loss being stable. (dung, do khong can bang, bi don 0)
-try importance weight even in the rerouting phase:
-	--> voi setup cua SOTA, mean F1 = (dang chay)
+
+
+scale lai gate loss.

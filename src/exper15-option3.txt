@@ -6,4 +6,6 @@ try importance weight even in the rerouting phase:
 option 3:
 	--> kha can bang
 --> thu giam importance weight:
-	--> importance_weight=0.25, mean F1=(dang chay)
+	--> importance_weight=0.25, mean F1=(not good), rerouting nhay nhieu
+--> tang importance weihgt:
+	--> mean F1=0.86925247908
