@@ -69,7 +69,7 @@ class CustomMoeSparse(nn.Module):
             positive = top_logits[positive_indices]
 
             pos_gate_idx = top_indices[positive_indices].squeeze(-1)
-            count_pos_id = F.one_hot(pos_gate_idx).sum(dim=0)
+            count_pos_id = F.one_hot(pos_gate_idx, num_classes=self.num_experts).sum(dim=0)
             count = count + count_pos_id
 
             positive_loss = - torch.log(positive).squeeze(-1)
@@ -85,7 +85,7 @@ class CustomMoeSparse(nn.Module):
             temp = torch.gather(res, dim=2, index=idx).squeeze(-1)
             neg_gate_idx = torch.argmax(temp, dim=-1)
 
-            count_neg_id = F.one_hot(neg_gate_idx).sum(dim=0)
+            count_neg_id = F.one_hot(neg_gate_idx, num_classes=self.num_experts).sum(dim=0)
             count = count + count_neg_id
 
             negative = gate_probs[negative_indices, neg_gate_idx]

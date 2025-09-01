@@ -101,3 +101,4 @@ implement dispatch code:
 
 
 scale lai gate_loss
+	--> running with setup of best hyper, mean F1=(dang chay)
