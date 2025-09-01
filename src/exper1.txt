@@ -14,3 +14,7 @@ Van de:
 Thu nghiem:
 - softer bilinear (not good)
 - sharp in bilinear 256 -> 2. (not good)
+
+
+Thu nghiem:
+- redefie sc_loss, (dang chay)
