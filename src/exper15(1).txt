@@ -98,3 +98,6 @@ try importance weight even in the rerouting phase:
 implement dispatch code:
 	- running with setup of best hyper, expecting mean F1 = 0.87162401676,
 			--> mean F1=khac so voi expectation.
+
+
+scale lai gate_loss

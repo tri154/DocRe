@@ -60,14 +60,21 @@ class CustomMoeSparse(nn.Module):
 
         gate_loss = 0.0
         if is_training and self.cfg.use_gate_loss:
+            count = torch.zeros(self.num_experts, device=h_rep.device)
+
             pred = torch.argmax(out, dim=-1)
             labels = torch.argmax(labels, dim=-1)
-            mask = pred == labels
+            positive_indices = pred == labels
 
-            positive = top_logits[mask]
-            positive_loss = - torch.log(positive).sum()
+            positive = top_logits[positive_indices]
 
-            negative_indices = torch.nonzero(~mask).squeeze(-1)
+            pos_gate_idx = top_indices[positive_indices].squeeze(-1)
+            count_pos_id = F.one_hot(pos_gate_idx).sum(dim=0)
+            count = count + count_pos_id
+
+            positive_loss = - torch.log(positive).squeeze(-1)
+
+            negative_indices = torch.nonzero(~positive_indices).squeeze(-1)
             negative_hrep = h_rep[negative_indices]
             negative_trep = t_rep[negative_indices]
             negative_labels = labels[negative_indices]
@@ -76,16 +83,33 @@ class CustomMoeSparse(nn.Module):
 
             idx = negative_labels.view(-1, 1, 1).expand(-1, self.num_experts, 1)
             temp = torch.gather(res, dim=2, index=idx).squeeze(-1)
-            # _, indices = torch.topk(temp, dim=-1, k=self.topk)
-            # indices = indices.squeeze(-1)
-            indices = torch.argmax(temp, dim=-1)
+            neg_gate_idx = torch.argmax(temp, dim=-1)
 
-            negative = gate_probs[negative_indices, indices]
-            negative_loss = - torch.log(negative).sum()
+            count_neg_id = F.one_hot(neg_gate_idx).sum(dim=0)
+            count = count + count_neg_id
 
-            gate_loss = positive_loss + negative_loss
+            negative = gate_probs[negative_indices, neg_gate_idx]
+            negative_loss = - torch.log(negative)
+
+            alpha = torch.zeros_like(count).to(h_rep.device)
+            nonzero_mask = count != 0
+            alpha[nonzero_mask] = 1.0 / count[nonzero_mask]
+
+            positive_loss = positive_loss * alpha[pos_gate_idx]
+            negative_loss = negative_loss * alpha[neg_gate_idx]
+
+            gate_loss = positive_loss.sum(dim=0) + negative_loss.sum(dim=0)
 
         return out, gate_probs, gate_loss
+
+
+    def compute_gate_loss(self, out, labels):
+        pred = torch.argmax(out, dim=-1)
+        labels = torch.argmax(labels, dim=-1)
+        mask = pred == labels
+        pass
+
+
 
     def forward_not_dispatch(self, h_rep, t_rep, top_indices, top_logits):
         n_sample = h_rep.shape[0]
