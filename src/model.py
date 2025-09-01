@@ -330,8 +330,6 @@ class Model(nn.Module):
         e_t = e_tw[:, 0, :]
         e_w = e_tw[:, 1, :]
 
-        # input()
-
         return e_t, e_w
 
     def forward(self, batch_input, current_epoch=None, is_training=False):
@@ -414,8 +412,10 @@ class Model(nn.Module):
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
-            raise Exception("Need to re-define")
-            # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
+            att_feat = torch.cat([att_feat_h, att_feat_t], dim=-1)
+            graph_feat = torch.cat([graph_feat_h, graph_feat_t], dim=-1)
+            relation_rep = torch.cat([att_feat, graph_feat], dim=-1)
+            sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         logits = self.re_model(h_rep, t_rep)
 
