@@ -17,4 +17,4 @@ Thu nghiem:
 
 
 Thu nghiem:
-- redefie sc_loss, (dang chay)
+- redefie sc_loss, (not good)
