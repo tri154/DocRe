@@ -101,4 +101,7 @@ implement dispatch code:
 
 
 scale lai gate_loss
-	--> running with setup of best hyper, mean F1=(dang chay)
+	--> running with setup of best hyper, mean F1=0.8710145235
+		--> nhieu seed van chua dc fit lam, loss kha cao, dev F1 thap
+			--> tang epoch.
+			--> tang gate loss weight (dang chay)
