@@ -60,54 +60,58 @@ class CustomMoeSparse(nn.Module):
 
         gate_loss = 0.0
         if is_training and self.cfg.use_gate_loss:
-            count = torch.zeros(self.num_experts, device=h_rep.device)
-
-            pred = torch.argmax(out, dim=-1)
-            labels = torch.argmax(labels, dim=-1)
-            positive_indices = pred == labels
-
-            positive = top_logits[positive_indices]
-
-            pos_gate_idx = top_indices[positive_indices].squeeze(-1)
-            count_pos_id = F.one_hot(pos_gate_idx, num_classes=self.num_experts).sum(dim=0)
-            count = count + count_pos_id
-
-            positive_loss = - torch.log(positive).squeeze(-1)
-
-            negative_indices = torch.nonzero(~positive_indices).squeeze(-1)
-            negative_hrep = h_rep[negative_indices]
-            negative_trep = t_rep[negative_indices]
-            negative_labels = labels[negative_indices]
-            res = torch.stack([self.experts[idx](negative_hrep, negative_trep) for idx in range(self.num_experts)], dim=1)
-            res = torch.softmax(res, dim=-1)
-
-            idx = negative_labels.view(-1, 1, 1).expand(-1, self.num_experts, 1)
-            temp = torch.gather(res, dim=2, index=idx).squeeze(-1)
-            neg_gate_idx = torch.argmax(temp, dim=-1)
-
-            count_neg_id = F.one_hot(neg_gate_idx, num_classes=self.num_experts).sum(dim=0)
-            count = count + count_neg_id
-
-            negative = gate_probs[negative_indices, neg_gate_idx]
-            negative_loss = - torch.log(negative)
-
-            alpha = torch.zeros_like(count).to(h_rep.device)
-            nonzero_mask = count != 0
-            alpha[nonzero_mask] = 1.0 / count[nonzero_mask]
-
-            positive_loss = positive_loss * alpha[pos_gate_idx]
-            negative_loss = negative_loss * alpha[neg_gate_idx]
-
-            gate_loss = positive_loss.sum(dim=0) + negative_loss.sum(dim=0)
+           gate_loss = self.compute_gate_loss(h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs)
 
         return out, gate_probs, gate_loss
 
 
-    def compute_gate_loss(self, out, labels):
+    def compute_gate_loss(self, h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs):
+        count = torch.zeros(self.num_experts, device=h_rep.device)
+
+        # positive loss
         pred = torch.argmax(out, dim=-1)
         labels = torch.argmax(labels, dim=-1)
-        mask = pred == labels
-        pass
+        positive_indices = pred == labels
+
+        positive = top_logits[positive_indices]
+
+        pos_gate_idx = top_indices[positive_indices].squeeze(-1)
+        count_pos_id = F.one_hot(pos_gate_idx, num_classes=self.num_experts).sum(dim=0)
+        count = count + count_pos_id
+
+        positive_loss = - torch.log(positive).squeeze(-1)
+
+        # negative loss
+        negative_indices = torch.nonzero(~positive_indices).squeeze(-1)
+        negative_hrep = h_rep[negative_indices]
+        negative_trep = t_rep[negative_indices]
+        negative_labels = labels[negative_indices]
+        res = torch.stack([self.experts[idx](negative_hrep, negative_trep) for idx in range(self.num_experts)], dim=1)
+        res = torch.softmax(res, dim=-1)
+
+        idx = negative_labels.view(-1, 1, 1).expand(-1, self.num_experts, 1)
+        temp = torch.gather(res, dim=2, index=idx).squeeze(-1)
+        neg_gate_idx = torch.argmax(temp, dim=-1)
+
+        count_neg_id = F.one_hot(neg_gate_idx, num_classes=self.num_experts).sum(dim=0)
+        count = count + count_neg_id
+
+        negative = gate_probs[negative_indices, neg_gate_idx]
+        negative_loss = - torch.log(negative)
+
+        # scale
+        alpha = torch.zeros_like(count).to(h_rep.device)
+        nonzero_mask = count != 0
+        alpha[nonzero_mask] = 1.0 / count[nonzero_mask]
+
+        positive_loss = positive_loss * alpha[pos_gate_idx]
+        negative_loss = negative_loss * alpha[neg_gate_idx]
+
+        # final loss
+        gate_loss = positive_loss.sum(dim=0) + negative_loss.sum(dim=0)
+
+        return gate_loss
+
 
 
 
