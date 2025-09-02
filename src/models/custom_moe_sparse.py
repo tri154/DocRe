@@ -113,8 +113,6 @@ class CustomMoeSparse(nn.Module):
         return gate_loss
 
 
-
-
     def forward_not_dispatch(self, h_rep, t_rep, top_indices, top_logits):
         n_sample = h_rep.shape[0]
         out = list()

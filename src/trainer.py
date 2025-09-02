@@ -216,6 +216,9 @@ class Trainer:
         if current_epoch < self.warmup_phase - 1:
             return total_loss
 
+        if current_epoch % self.cfg.rerouting_interval != 0:
+            return total_loss
+
         self.prepare_rerouting()
         if current_epoch == self.warmup_phase - 1:
             self.cfg.noise_type = 'uniform'
