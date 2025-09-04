@@ -350,9 +350,9 @@ class Trainer:
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
         self.model.bilinear.reset_stats()
-        self.model.bilinear.set_more_logging(True)
+        # self.model.bilinear.set_more_logging(True)
         t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
-        self.model.bilinear.set_more_logging(False)
+        # self.model.bilinear.set_more_logging(False)
         self.cfg.logging(f"Stats test: {self.model.bilinear.stats} ", is_printed=True)
         self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
