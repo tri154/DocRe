@@ -59,10 +59,16 @@ class CustomMoeSparse(nn.Module):
         # out = self.forward_dispatch(h_rep, t_rep, top_indices, top_logits)
 
         gate_loss = 0.0
-        if is_training and self.cfg.use_gate_loss:
-           gate_loss = self.compute_gate_loss(h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs)
+        # if is_training and self.cfg.use_gate_loss:
+        gate_labels = None
+        if is_training and (self.cfg.use_gate_loss or self.cfg.use_sc):
+           gate_loss, gate_labels = self.compute_gate_loss(h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs)
+           if self.cfg.use_gate_loss == False:
+               gate_loss = 0.0
+           if self.cfg.use_sc == False:
+                gate_labels = None
 
-        return out, gate_probs, gate_loss
+        return out, gate_probs, gate_loss, gate_labels
 
 
     def compute_gate_loss(self, h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs):
@@ -107,10 +113,16 @@ class CustomMoeSparse(nn.Module):
         positive_loss = positive_loss * alpha[pos_gate_idx]
         negative_loss = negative_loss * alpha[neg_gate_idx]
 
+        # gate_label for sc_loss
+        gate_labels = torch.cat([pos_gate_idx, neg_gate_idx], dim=-1)
+        sample_indices = torch.cat([positive_indices.nonzero().squeeze(-1), negative_indices], dim=-1)
+        _, sorted_indices = torch.sort(sample_indices)
+        gate_labels = gate_labels[sorted_indices]
+
         # final loss
         gate_loss = positive_loss.sum(dim=0) + negative_loss.sum(dim=0)
 
-        return gate_loss
+        return gate_loss, gate_labels
 
 
     def forward_not_dispatch(self, h_rep, t_rep, top_indices, top_logits):

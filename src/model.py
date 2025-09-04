@@ -429,14 +429,14 @@ class Model(nn.Module):
         h_rep = self.w_h(h_rep)
         t_rep = self.w_t(t_rep)
 
-        sc_loss = 0.0
-        if is_training and self.cfg.use_sc:
-            raise Exception("Need to re-define")
-            # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
 
         # logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training, cur_epoch=current_epoch)
         # for custom moe only
-        logits, gate_out, gate_loss = self.re_model(h_rep, t_rep, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
+        logits, gate_out, gate_loss, gate_labels = self.re_model(h_rep, t_rep, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
+
+        sc_loss = 0.0
+        if is_training and self.cfg.use_sc:
+            sc_loss = self.loss.SC_loss(cnn_feat, gate_labels, is_oh=False)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
@@ -457,5 +457,10 @@ class Model(nn.Module):
         loss += self.cfg.importance_weight * importance_loss
         loss += self.cfg.sc_weight * sc_loss
         loss += self.cfg.gatel_weight * gate_loss
+
+        # print("re_loss", re_loss)
+        # print("sc_loss", sc_loss)
+        # print("gate_loss", gate_loss)
+        # print("importance_loss", importance_loss)
 
         return loss, torch.split(logits.detach().cpu(), num_rel_per_doc.tolist())

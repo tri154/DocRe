@@ -49,9 +49,9 @@ UPPER_TEMP=20.0
 LOSS_TRADEOFF=4.999979907145212
 
 
-USE_SC=False
-SC_TEMP=0.16096448806072833
-SC_WEIGHT=0.1509642367395748
+# USE_SC=True
+SC_TEMP=0.75
+SC_WEIGHT=0.1
 
 RE_LOSS="CE" # AT, CE, sigmoidF1, softmaxF1
 FOCAL_GAMMA=2.5
@@ -96,14 +96,13 @@ python main.py \
   --lower_temp $LOWER_TEMP \
   --upper_temp $UPPER_TEMP \
   --loss_tradeoff $LOSS_TRADEOFF \
-  --use_sc $USE_SC \
   --sc_temp $SC_TEMP \
   --sc_weight $SC_WEIGHT \
   --focal_gamma $FOCAL_GAMMA \
   --re_loss $RE_LOSS \
   --penalty_weight $PENALTY_WEIGHT
 
-
+  # --use_sc $USE_SC \
   # --use_gate_loss $USE_GATE_LOSS \
   # --use_importance_loss $USE_IMPORTANCE_LOSS \
   # --noise_type $NOISE_TYPE \

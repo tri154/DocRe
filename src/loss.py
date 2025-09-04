@@ -199,7 +199,7 @@ class Loss:
         return loss, current_tradeoff
 
 
-    def SC_loss(self, reps, oh_labels):
+    def SC_loss(self, reps, oh_labels, is_oh=True):
         '''
             A new loss function, that only works for single label.
         '''
@@ -215,7 +215,10 @@ class Loss:
         device = self.cfg.device
         reps = F.normalize(reps, p=2, dim=1)
         n_sample = len(reps)
-        labels = oh_labels.argmax(dim=-1)
+        if is_oh:
+            labels = oh_labels.argmax(dim=-1)
+        else:
+            labels = oh_labels
         uniques, counts = torch.unique(labels,return_counts=True)
         val2count = dict(zip(uniques.tolist(), counts.tolist()))
         pairs = torch.triu_indices(n_sample, n_sample, offset=1).to(device)

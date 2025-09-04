@@ -247,6 +247,7 @@ class Trainer:
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = True
         self.cfg.use_gate_loss = False
+        self.cfg.use_sc = False
 
     def prepare_fitting(self):
         for name, param in self.model.named_parameters():
@@ -255,6 +256,7 @@ class Trainer:
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = False
         self.cfg.use_gate_loss = False
+        self.cfg.use_sc = True
 
     def prepare_rerouting(self):
         for name, param in self.model.named_parameters():
@@ -263,6 +265,7 @@ class Trainer:
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = False
         self.cfg.use_gate_loss = True
+        self.cfg.use_sc = False
 
     def train(self, num_epoches, batch_size, train_set=None):
         if train_set is not None:
