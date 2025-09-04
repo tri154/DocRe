@@ -212,12 +212,18 @@ class Trainer:
         self.model.bilinear.reset_stats()
         # logging
 
-        # warmup phase doesn't have rerouting, only the last warmup epoch.
-        if current_epoch < self.warmup_phase - 1:
+        # warmup phase doesn't have rerouting, only the last warmup epoch or in interval epoch.
+        is_warmup = current_epoch < self.warmup_phase - 1
+        is_rerouting = (current_epoch == self.warmup_phase - 1) or (current_epoch % self.cfg.rerouting_interval == 0)
+
+        if is_warmup or not is_rerouting:
             return total_loss
 
-        if current_epoch % self.cfg.rerouting_interval != 0:
-            return total_loss
+        # if current_epoch < self.warmup_phase - 1:
+        #     return total_loss
+
+        # if current_epoch % self.cfg.rerouting_interval != 0:
+        #     return total_loss
 
         self.prepare_rerouting()
         if current_epoch == self.warmup_phase - 1:
