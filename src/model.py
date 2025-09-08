@@ -431,8 +431,7 @@ class Model(nn.Module):
 
         sc_loss = 0.0
         if is_training and self.cfg.use_sc:
-            raise Exception("Need to re-define")
-            # sc_loss = self.loss.SC_loss(relation_rep, batch_labels)
+            sc_loss = self.loss.SC_loss(cnn_feat, batch_labels)
 
         # logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training, cur_epoch=current_epoch)
         # for custom moe only
