@@ -44,14 +44,10 @@ class Model(nn.Module):
         self.cnn = CNN(emb_size, device=self.cfg.device)
 
         self.w_h = nn.Sequential(
-            nn.Linear(emb_size * 3, emb_size * 2),
-            nn.LayerNorm(emb_size * 2),
-            nn.Tanh(),
-            nn.Dropout(0.1),
-
             nn.Linear(emb_size * 2, emb_size),
             nn.LayerNorm(emb_size),
-            torch.nn.Tanh(),
+            nn.Tanh(),
+            nn.Dropout(0.1),
 
             nn.Linear(emb_size, emb_size // 2),
             nn.LayerNorm(emb_size // 2),
@@ -59,14 +55,10 @@ class Model(nn.Module):
         )
 
         self.w_t = nn.Sequential(
-            nn.Linear(emb_size * 3, emb_size * 2),
-            nn.LayerNorm(emb_size * 2),
-            nn.Tanh(),
-            nn.Dropout(0.1),
-
             nn.Linear(emb_size * 2, emb_size),
             nn.LayerNorm(emb_size),
-            torch.nn.Tanh(),
+            nn.Tanh(),
+            nn.Dropout(0.1),
 
             nn.Linear(emb_size, emb_size // 2),
             nn.LayerNorm(emb_size // 2),
@@ -399,8 +391,10 @@ class Model(nn.Module):
                                                            num_rel_per_doc,
                                                            batch_titles)
 
-        h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
-        t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
+        # h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
+        # t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
+        h_rep = torch.cat([cnn_feat, att_feat_h], dim=-1)
+        t_rep = torch.cat([cnn_feat, att_feat_t], dim=-1)
         h_rep = self.w_h(h_rep)
         t_rep = self.w_t(t_rep)
 
