@@ -1,3 +1,4 @@
+# move to evalute.sh
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 DATASET="$1"

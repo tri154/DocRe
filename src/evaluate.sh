@@ -38,7 +38,8 @@ IMPORTANCE_WEIGHT=0.5
 # USE_GATE_LOSS=True
 GATEL_WEIGHT=0.1
 WARMUP_PHASE=2
-REROUTING_INTERVAL=5
+# REROUTING_INTERVAL=5
+REROUTING_EPOCHS="5 10 15"
 
 USE_PSD=True
 LOWER_TEMP=2.0
@@ -83,7 +84,7 @@ for SEED in "${SEEDS[@]}"; do
     --max_grad_norm $MAX_GRAD_NORM \
     --new_lr $NEW_LR \
     --pretrained_lr $PRETRAINED_LR \
-	--gate_lr $GATE_LR \
+    --gate_lr $GATE_LR \
     --adam_epsilon $ADAM_EPSILON \
     --device $DEVICE \
     --transformer $TRANSFORMER \
@@ -99,9 +100,9 @@ for SEED in "${SEEDS[@]}"; do
   	--num_experts $NUM_EXPERTS \
   	--noise_scale $NOISE_SCALE \
   	--importance_weight $IMPORTANCE_WEIGHT \
-	--gatel_weight $GATEL_WEIGHT \
+    --gatel_weight $GATEL_WEIGHT \
   	--warmup_phase $WARMUP_PHASE \
-  	--rerouting_interval $REROUTING_INTERVAL \
+  	--rerouting_epochs $REROUTING_EPOCHS \
     --use_psd $USE_PSD \
     --lower_temp $LOWER_TEMP \
     --upper_temp $UPPER_TEMP \
