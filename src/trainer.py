@@ -49,8 +49,10 @@ class Trainer:
 
         # modify logic here if modify training phase logic.
         # num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch - (self.warmup_phase - 1))
+        # sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
+
         num_updates_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase + len(self.cfg.rerouting_epochs))
-        num_warmups_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase)
+        num_warmups_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase + len(self.cfg.rerouting_epochs))
         sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups_gate, num_updates_gate)
 
         return opt_main, sched_main, opt_gate, sched_gate
@@ -205,6 +207,9 @@ class Trainer:
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
                 self.opt_main.step()
+                if current_epoch < self.warmup_phase - 1:
+                    self.opt_gate.step()
+                    self.sched_gate.step()
                 self.opt_main.zero_grad()
                 self.opt_gate.zero_grad()
                 self.sched_main.step()
@@ -222,8 +227,8 @@ class Trainer:
             return total_loss
 
         self.prepare_rerouting()
-        if current_epoch == self.warmup_phase - 1:
-            self.cfg.noise_type = 'uniform'
+        # if current_epoch == self.warmup_phase - 1:
+        #     self.cfg.noise_type = 'uniform'
 
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
             batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
@@ -234,7 +239,7 @@ class Trainer:
                 self.opt_gate.step()
                 self.opt_gate.zero_grad()
                 self.opt_main.zero_grad()
-                self.sched_gate.step() # call the scheduler for gate.
+                self.sched_gate.step()
         # logging
         self.cfg.logging(f"Stats train (after rerouting): {self.model.bilinear.stats} ", is_printed=True)
         self.model.bilinear.reset_stats()

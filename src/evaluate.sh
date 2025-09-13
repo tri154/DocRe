@@ -1,4 +1,3 @@
-%%writefile evaluate.sh
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 DATASET="cdr"
 
