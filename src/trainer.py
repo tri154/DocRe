@@ -232,7 +232,7 @@ class Trainer:
                 self.opt_gate.step()
                 self.opt_gate.zero_grad()
                 self.opt_main.zero_grad()
-                self.sched_gate.step()
+                # self.sched_gate.step() # not call the scheduler for gate.
         # logging
         self.cfg.logging(f"Stats train (after rerouting): {self.model.bilinear.stats} ", is_printed=True)
         self.model.bilinear.reset_stats()
