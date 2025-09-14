@@ -207,7 +207,7 @@ class Trainer:
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
                 self.opt_main.step()
-                if current_epoch < self.warmup_phase - 1:
+                if current_epoch < self.warmup_phase:
                     self.opt_gate.step()
                     self.sched_gate.step()
                 self.opt_main.zero_grad()
