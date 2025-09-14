@@ -14,6 +14,8 @@ MAX_GRAD_NORM=1.0
 NEW_LR=8e-5
 PRETRAINED_LR=1.472039003976042e-05
 GATE_LR=1e-5
+LOWER_GATE_LR=0.2
+UPPER_GATE_LR=0.8
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
@@ -86,6 +88,8 @@ for SEED in "${SEEDS[@]}"; do
     --new_lr $NEW_LR \
     --pretrained_lr $PRETRAINED_LR \
     --gate_lr $GATE_LR \
+    --lower_gate_lr $LOWER_GATE_LR \
+    --upper_gate_lr $UPPER_GATE_LR \
     --adam_epsilon $ADAM_EPSILON \
     --device $DEVICE \
     --transformer $TRANSFORMER \

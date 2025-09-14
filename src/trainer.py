@@ -28,14 +28,13 @@ class Trainer:
     #             'doc_start_mpos': doc_start_mpos, # a dict of set. entity_id -> set of start of mentions token.
     #             'doc_sent_pos': doc_sent_pos} # a dict, sent_id -> (start, end) in token.
 
-    def get_gate_scheduler(self, opt, num_warmup_steps, num_training_steps):
+    def get_gate_scheduler(self, opt, num_warmup_steps, num_training_steps, lower_lr, upper_lr):
         def lr_lambda(current_step: int):
             if current_step < num_warmup_steps:
-                return float(current_step) / float(max(1, num_warmup_steps))
-            return max(0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps)))
+                return (1.0 - lower_lr) * float(current_step) / float(num_warmup_steps)  + lower_lr
+            return (upper_lr - 1.0) * float(current_step - num_warmup_steps) / float(num_training_steps - num_warmup_steps) + 1.0
+
         return LambdaLR(opt, lr_lambda)
-
-
 
     def prepare_optimizer_scheduler(self):
         grouped_params = defaultdict(list)
@@ -63,7 +62,8 @@ class Trainer:
 
         num_updates_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (1 + len(self.cfg.rerouting_epochs))
         num_warmups_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (1)
-        sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups_gate, num_updates_gate)
+        # sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups_gate, num_updates_gate)
+        sched_gate = self.get_gate_scheduler(opt_gate,num_warmups_gate, num_updates_gate, self.cfg.lower_gate_lr, self.cfg.upper_gate_lr)
 
         return opt_main, sched_main, opt_gate, sched_gate
 
