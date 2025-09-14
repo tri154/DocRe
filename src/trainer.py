@@ -6,7 +6,9 @@ import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from collections import defaultdict
 from transformers.optimization import get_linear_schedule_with_warmup
+from torch.optim.lr_scheduler import LambdaLR
 from torch.optim import AdamW
+
 
 
 class Trainer:
@@ -25,6 +27,14 @@ class Trainer:
     #             'doc_title': doc_title,
     #             'doc_start_mpos': doc_start_mpos, # a dict of set. entity_id -> set of start of mentions token.
     #             'doc_sent_pos': doc_sent_pos} # a dict, sent_id -> (start, end) in token.
+
+    def get_gate_scheduler(self, opt, num_warmup_steps, num_training_steps):
+        def lr_lambda(current_step: int):
+            if current_step < num_warmup_steps:
+                return float(current_step) / float(max(1, num_warmup_steps))
+            return max(0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps)))
+        return LambdaLR(opt, lr_lambda)
+
 
 
     def prepare_optimizer_scheduler(self):
@@ -227,8 +237,8 @@ class Trainer:
             return total_loss
 
         self.prepare_rerouting()
-        if current_epoch == self.warmup_phase - 1:
-            self.cfg.noise_type = 'uniform'
+        # if current_epoch == self.warmup_phase - 1:
+        #     self.cfg.noise_type = 'uniform'
 
         for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
             batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
