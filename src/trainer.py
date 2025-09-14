@@ -51,7 +51,7 @@ class Trainer:
         # num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch - (self.warmup_phase - 1))
         # sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
 
-        num_updates_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase + len(self.cfg.rerouting_epochs))
+        num_updates_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase + 1 + len(self.cfg.rerouting_epochs))
         num_warmups_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase + 1)
         sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups_gate, num_updates_gate)
 
