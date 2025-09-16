@@ -60,10 +60,10 @@ class Trainer:
         # num_updates = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch - (self.warmup_phase - 1))
         # sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups, num_updates)
 
-        num_updates_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (1 + len(self.cfg.rerouting_epochs))
-        num_warmups_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (1)
+        num_updates_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.num_epoch)
+        num_warmups_gate = math.ceil(math.ceil(len(self.train_set) / self.cfg.train_batch_size) / self.cfg.update_freq) * (self.cfg.warmup_phase)
         # sched_gate = get_linear_schedule_with_warmup(opt_gate, num_warmups_gate, num_updates_gate)
-        sched_gate = self.get_gate_scheduler(opt_gate,num_warmups_gate, num_updates_gate, self.cfg.lower_gate_lr, self.cfg.upper_gate_lr)
+        sched_gate = self.get_gate_scheduler(opt_gate, num_warmups_gate, num_updates_gate, self.cfg.lower_gate_lr, self.cfg.upper_gate_lr)
 
         return opt_main, sched_main, opt_gate, sched_gate
 
@@ -217,62 +217,34 @@ class Trainer:
             if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
                 self.opt_main.step()
-                if current_epoch < self.warmup_phase:
-                    self.opt_gate.step()
-                    # self.sched_gate.step()
-                self.opt_main.zero_grad()
-                self.opt_gate.zero_grad()
-                self.sched_main.step()
-
-        # logging
-        self.cfg.logging(f"Stats train (before rerouting): {self.model.bilinear.stats} ", is_printed=True)
-        self.model.bilinear.reset_stats()
-        # logging
-
-        # warmup phase doesn't have rerouting, only the last warmup epoch or in interval epoch.
-        is_warmup = current_epoch < self.warmup_phase - 1
-        is_rerouting = (current_epoch == self.warmup_phase - 1) or (current_epoch in self.cfg.rerouting_epochs)
-
-        if is_warmup or not is_rerouting:
-            return total_loss
-
-        self.prepare_rerouting()
-        # if current_epoch == self.warmup_phase - 1:
-        #     self.cfg.noise_type = 'uniform'
-
-        for idx_batch, batch_input in enumerate(self.prepare_batch(batch_size)):
-            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
-            (batch_loss / self.cfg.update_freq).backward()
-
-            if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
-                clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
                 self.opt_gate.step()
-                self.opt_gate.zero_grad()
+
                 self.opt_main.zero_grad()
+                self.opt_gate.zero_grad()
+
+                self.sched_main.step()
                 self.sched_gate.step()
-        # logging
-        self.cfg.logging(f"Stats train (after rerouting): {self.model.bilinear.stats} ", is_printed=True)
-        self.model.bilinear.reset_stats()
-        # logging
 
         return total_loss
 
+
     def prepare_warmup(self):
         # self.cfg.noise_limit = 1
-        for name, param in self.model.named_parameters():
-            param.requires_grad = True
+        # for name, param in self.model.named_parameters():
+        #     param.requires_grad = True
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = True
         self.cfg.use_gate_loss = False
 
     def prepare_fitting(self):
-        for name, param in self.model.named_parameters():
-            param.requires_grad = True
-        self.model.bilinear.toggle_gate_weight(False)
+        # for name, param in self.model.named_parameters():
+        #     param.requires_grad = True
+        # self.model.bilinear.toggle_gate_weight(False)
         self.cfg.noise_type = None
         self.cfg.use_importance_loss = False
-        self.cfg.use_gate_loss = False
+        self.cfg.use_gate_loss = True
 
+    # not use
     def prepare_rerouting(self):
         for name, param in self.model.named_parameters():
             param.requires_grad = False
@@ -292,7 +264,7 @@ class Trainer:
             self.model.bilinear.reset_stats()
             epoch_loss = self.train_one_epoch(idx_epoch, batch_size)
 
-            # self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ", is_printed=True)
+            self.cfg.logging(f"Stats train: {self.model.bilinear.stats} ", is_printed=True)
 
             self.model.bilinear.reset_stats()
             d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
