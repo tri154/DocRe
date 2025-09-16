@@ -5,7 +5,7 @@ from models.expert import Expert
 
 class CustomMoeSparse(nn.Module):
 
-    def __init__(self, cfg, in1_features, in2_features, out_features):
+    def __init__(self, cfg, in_features, out_features):
         super().__init__()
         self.cfg = cfg
         self.num_experts = self.cfg.num_experts
@@ -16,33 +16,33 @@ class CustomMoeSparse(nn.Module):
         self.stats = torch.zeros(self.num_experts)
 
         self.experts = nn.ModuleList([
-            Expert(in1_features, in2_features, out_features) for _ in range(self.num_experts)
+            Expert(in_features, out_features) for _ in range(self.num_experts)
         ])
 
-        self.gate = nn.Bilinear(in1_features, in2_features, self.num_experts)
+        self.gate = nn.Linear(in_features, self.num_experts)
 
         # nn.init.xavier_uniform_(self.gate.weight)
         # nn.init.zeros_(self.gate.weight)
         # nn.init.zeros_(self.gate.bias)
 
         if self.cfg.noise_type == 'normal':
-            self.noise = nn.Bilinear(in1_features, in2_features, self.num_experts)
+            self.noise = nn.Linear(in_features, self.num_experts)
             nn.init.zeros_(self.noise.weight)
             nn.init.zeros_(self.noise.bias)
 
-    def __add_noise(self, h_rep, t_rep, gate_logits, cur_epoch=None):
+    def __add_noise(self, pair_reps, gate_logits, cur_epoch=None):
         if self.cfg.noise_type == 'normal':
-            return self.__add_trainable_normal_noise(h_rep, t_rep, gate_logits)
+            return self.__add_trainable_normal_noise(pair_reps , gate_logits)
         elif self.cfg.noise_type == 'uniform':
-            return self.__add_uniform_noise(h_rep, t_rep , gate_logits)
+            return self.__add_uniform_noise(pair_reps , gate_logits)
         else:
             raise Exception("not a noise type.")
 
 
-    def forward(self, h_rep ,t_rep, labels, is_training=True, cur_epoch=None):
-        gate_logits = self.gate(h_rep, t_rep)
+    def forward(self, pair_reps , labels, is_training=True, cur_epoch=None):
+        gate_logits = self.gate(pair_reps)
         if is_training and self.cfg.noise_type is not None:
-            gate_logits = self.__add_noise(h_rep, t_rep, gate_logits, cur_epoch=cur_epoch)
+            gate_logits = self.__add_noise(pair_reps , gate_logits, cur_epoch=cur_epoch)
 
         gate_probs = F.softmax(gate_logits, dim=-1)
         top_logits, top_indices = gate_probs.topk(self.topk, dim=-1)
@@ -55,18 +55,18 @@ class CustomMoeSparse(nn.Module):
         temp = F.one_hot(torch.argmax(gate_probs.detach(), dim=-1), num_classes=gate_probs.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
-        out = self.forward_not_dispatch(h_rep, t_rep, top_indices, top_logits)
+        out = self.forward_not_dispatch(pair_reps, top_indices, top_logits)
         # out = self.forward_dispatch(h_rep, t_rep, top_indices, top_logits)
 
         gate_loss = 0.0
         if is_training and self.cfg.use_gate_loss:
-           gate_loss = self.compute_gate_loss(h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs)
+           gate_loss = self.compute_gate_loss(pair_reps, out, labels, top_logits, top_indices, gate_probs)
 
         return out, gate_probs, gate_loss
 
 
-    def compute_gate_loss(self, h_rep, t_rep, out, labels, top_logits, top_indices, gate_probs):
-        count = torch.zeros(self.num_experts, device=h_rep.device)
+    def compute_gate_loss(self, pair_reps, out, labels, top_logits, top_indices, gate_probs):
+        count = torch.zeros(self.num_experts, device=pair_reps.device)
 
         # positive loss
         pred = torch.argmax(out, dim=-1)
@@ -83,10 +83,9 @@ class CustomMoeSparse(nn.Module):
 
         # negative loss
         negative_indices = torch.nonzero(~positive_indices).squeeze(-1)
-        negative_hrep = h_rep[negative_indices]
-        negative_trep = t_rep[negative_indices]
+        negative_pair_reps = pair_reps[negative_indices]
         negative_labels = labels[negative_indices]
-        res = torch.stack([self.experts[idx](negative_hrep, negative_trep) for idx in range(self.num_experts)], dim=1)
+        res = torch.stack([self.experts[idx](negative_pair_reps) for idx in range(self.num_experts)], dim=1)
         res = torch.softmax(res, dim=-1)
 
         idx = negative_labels.view(-1, 1, 1).expand(-1, self.num_experts, 1)
@@ -100,7 +99,7 @@ class CustomMoeSparse(nn.Module):
         negative_loss = - torch.log(negative)
 
         # scale
-        alpha = torch.zeros_like(count).to(h_rep.device)
+        alpha = torch.zeros_like(count).to(pair_reps.device)
         nonzero_mask = count != 0
         alpha[nonzero_mask] = 1.0 / count[nonzero_mask]
 
@@ -113,12 +112,12 @@ class CustomMoeSparse(nn.Module):
         return gate_loss
 
 
-    def forward_not_dispatch(self, h_rep, t_rep, top_indices, top_logits):
-        n_sample = h_rep.shape[0]
+    def forward_not_dispatch(self, pair_reps, top_indices, top_logits):
+        n_sample = pair_reps.shape[0]
         out = list()
         for sample_id in range(n_sample):
             expert_ids = top_indices[sample_id]
-            sample_out = torch.stack([self.experts[i](h_rep[sample_id], t_rep[sample_id]) for i in expert_ids])
+            sample_out = torch.stack([self.experts[i](pair_reps[sample_id]) for i in expert_ids])
 
             sample_gate = top_logits[sample_id]
             sample_gate = sample_gate.detach() # gate weight not involved in main loss.
@@ -185,12 +184,12 @@ class CustomMoeSparse(nn.Module):
         res = torch.bmm(top_logits_norm.unsqueeze(1), temp).squeeze(1)
         return res
 
-    def __add_uniform_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=0.1):
+    def __add_uniform_noise(self, pair_reps, gate_logits, noise_epsilon=0.1):
         noise_logits = torch.rand_like(gate_logits).to(gate_logits.device)
         return gate_logits + noise_epsilon * noise_logits
 
-    def __add_trainable_normal_noise(self, h_rep, t_rep, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
-        noise_stddev = F.softplus(self.noise(h_rep, t_rep)) + noise_epsilon
+    def __add_trainable_normal_noise(self, pair_reps, gate_logits, noise_epsilon=1e-2, cur_epoch=None):
+        noise_stddev = F.softplus(self.noise(pair_reps)) + noise_epsilon
         noise_logits = torch.randn(gate_logits.shape).to(gate_logits.device) * noise_stddev
         return gate_logits + noise_logits
 

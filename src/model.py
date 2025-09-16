@@ -77,6 +77,7 @@ class Model(nn.Module):
             torch.nn.Tanh(),
         )
 
+        self.reps_extract = nn.Bilinear(emb_size // 2, emb_size // 2, emb_size // 4)
         if self.cfg.use_moe:
             if self.cfg.moe_type == 'dense':
                 self.bilinear = MoeDense(self.cfg,
@@ -87,10 +88,10 @@ class Model(nn.Module):
                 self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: self.bilinear(h, t)
             elif self.cfg.moe_type == 'sparse':
                 self.bilinear = CustomMoeSparse(self.cfg,
-                                                emb_size // 2, emb_size // 2,
+                                                emb_size // 4,
                                                 self.cfg.num_rel)
                 # self.re_model = lambda h, t, is_training=True: self.bilinear(h, t, is_training=is_training)
-                self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: self.bilinear(h, t, labels=batch_labels, is_training=is_training)
+                self.re_model = lambda pair, batch_labels=None, is_training=True, cur_epoch=None: self.bilinear(pair, labels=batch_labels, is_training=is_training)
         else:
             self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
             self.re_model = lambda h, t, batch_labels=None, is_training=True, cur_epoch=None: (self.bilinear(h, t), None)
@@ -436,7 +437,8 @@ class Model(nn.Module):
 
         # logits, gate_out = self.re_model(h_rep, t_rep, is_training=is_training, cur_epoch=current_epoch)
         # for custom moe only
-        logits, gate_out, gate_loss = self.re_model(h_rep, t_rep, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
+        pair_reps = self.reps_extract(h_rep, t_rep)
+        logits, gate_out, gate_loss = self.re_model(pair_reps, batch_labels=batch_labels, is_training=is_training, cur_epoch=current_epoch)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
