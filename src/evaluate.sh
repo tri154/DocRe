@@ -18,8 +18,8 @@ LOWER_GATE_LR=0.2
 UPPER_GATE_LR=0.8
 ADAM_EPSILON=1e-6
 
-DEVICE="cuda:0"
-# DEVICE="cpu"
+# DEVICE="cuda:0"
+DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 

@@ -14,6 +14,7 @@ class CustomMoeSparse(nn.Module):
 
         self.more_logging = False
         self.stats = torch.zeros(self.num_experts)
+        self.class_count = torch.zeros((self.num_experts, self.cfg.num_rel))
 
         self.experts = nn.ModuleList([
             Expert(in_features, out_features) for _ in range(self.num_experts)
@@ -52,11 +53,21 @@ class CustomMoeSparse(nn.Module):
 
         if self.more_logging:
             self.cfg.another_logging(f"{gate_probs }")
+        # n_sample, n_experts
         temp = F.one_hot(torch.argmax(gate_probs.detach(), dim=-1), num_classes=gate_probs.shape[-1]).int()
         self.stats = self.stats.cpu() + temp.sum(dim=0).cpu()
 
+
         out = self.forward_not_dispatch(pair_reps, top_indices, top_logits)
         # out = self.forward_dispatch(h_rep, t_rep, top_indices, top_logits)
+        abc = torch.argmax(gate_probs.detach(), dim=-1)
+        pred = torch.argmax(out, dim=-1)
+        one_hot_pred = F.one_hot(pred, num_classes=self.cfg.num_rel).float().detach().cpu()
+        for i in range(self.num_experts):
+            tt = abc == i
+            out_tt = one_hot_pred[tt.cpu()]
+            out_tt = out_tt.sum(dim=0)
+            self.class_count[i] += out_tt
 
         gate_loss = 0.0
         if is_training and self.cfg.use_gate_loss:
@@ -195,6 +206,7 @@ class CustomMoeSparse(nn.Module):
 
     def reset_stats(self):
         self.stats = torch.zeros(self.num_experts)
+        self.class_count = torch.zeros((self.num_experts, self.cfg.num_rel))
 
     def set_more_logging(self, value):
         self.more_logging = value
