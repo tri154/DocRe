@@ -58,6 +58,16 @@ class CustomMoeSparse(nn.Module):
         out = self.forward_not_dispatch(pair_reps, top_indices, top_logits)
         # out = self.forward_dispatch(h_rep, t_rep, top_indices, top_logits)
 
+        if not is_training:
+            abc = torch.argmax(gate_probs.detach(), dim=-1)
+            pred = torch.argmax(out, dim=-1)
+            one_hot_pred = F.one_hot(pred, num_classes=self.cfg.num_rel).float().detach().cpu()
+            for i in range(self.num_experts):
+                tt = abc == i
+                out_tt = one_hot_pred[tt.cpu()]
+                out_tt = out_tt.sum(dim=0)
+                self.class_count[i] += out_tt
+
         gate_loss = 0.0
         if is_training and self.cfg.use_gate_loss:
            gate_loss = self.compute_gate_loss(pair_reps, out, labels, top_logits, top_indices, gate_probs)

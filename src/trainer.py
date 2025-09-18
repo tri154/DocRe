@@ -269,6 +269,7 @@ class Trainer:
             self.model.bilinear.reset_stats()
             d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
             self.cfg.logging(f"Stats dev: {self.model.bilinear.stats} ", is_printed=True)
+            self.cfg.logging(f"Stats dev: {self.model.bilinear.class_count} ", is_printed=True)
             self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
 
             if d_f1 > self.best_f1_dev:
@@ -283,6 +284,7 @@ class Trainer:
         t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
         self.model.bilinear.set_more_logging(False)
         self.cfg.logging(f"Stats test: {self.model.bilinear.stats} ", is_printed=True)
+        self.cfg.logging(f"Stats test: {self.model.bilinear.class_count} ", is_printed=True)
         self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
         return self.best_f1_dev
