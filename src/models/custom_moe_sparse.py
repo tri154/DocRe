@@ -14,6 +14,7 @@ class CustomMoeSparse(nn.Module):
 
         self.more_logging = False
         self.stats = torch.zeros(self.num_experts)
+        self.class_count = torch.zeros((self.num_experts, self.cfg.num_rel))
 
         self.experts = nn.ModuleList([
             Expert(in_features, out_features) for _ in range(self.num_experts)
@@ -205,6 +206,7 @@ class CustomMoeSparse(nn.Module):
 
     def reset_stats(self):
         self.stats = torch.zeros(self.num_experts)
+        self.class_count = torch.zeros((self.num_experts, self.cfg.num_rel))
 
     def set_more_logging(self, value):
         self.more_logging = value
