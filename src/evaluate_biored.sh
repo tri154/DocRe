@@ -65,7 +65,6 @@ for SEED in "${SEEDS[@]}"; do
     --new_lr $NEW_LR \
     --pretrained_lr $PRETRAINED_LR \
     --adam_epsilon $ADAM_EPSILON \
-  	--patience $PATIENCE \
     --device $DEVICE \
     --transformer $TRANSFORMER \
     --seq_process_type $SEQ_PROCESS_TYPE\
@@ -83,8 +82,5 @@ for SEED in "${SEEDS[@]}"; do
     --sc_weight $SC_WEIGHT \
     --focal_gamma $FOCAL_GAMMA \
   	--re_loss $RE_LOSS \
-    --β $BETA \
-	--η $ETA \
-  	--T $T \
   	--penalty_weight $PENALTY_WEIGHT
 done

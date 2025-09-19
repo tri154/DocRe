@@ -4,9 +4,9 @@ DATASET="gda"
 SAVE_PATH_BASE="outputs"
 LOG_PATH_BASE="logs"
 
-NUM_EPOCH=15
+NUM_EPOCH=10
 TRAIN_BATCH_SIZE=4
-TEST_BATCH_SIZE=4
+TEST_BATCH_SIZE=8
 UPDATE_FREQ=1
 WARMUP_RATIO=0.06
 MAX_GRAD_NORM=1.0
@@ -14,7 +14,6 @@ MAX_GRAD_NORM=1.0
 NEW_LR=8e-5
 PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
-PATIENCE=-1
 
 DEVICE="cuda:0"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
@@ -29,20 +28,16 @@ HIGH_LAYERS=2
 USE_PSD=True
 LOWER_TEMP=2.0
 UPPER_TEMP=20.0
-LOSS_TRADEOFF=4.999979907145212
+LOSS_TRADEOFF=30.0
 
 USE_SC=False
 SC_TEMP=0.5824951879607512
 SC_WEIGHT=0.3108995767362708
 
-RE_LOSS="AT"
-FOCAL_GAMMA=1
-BETA=1.0
-ETA=0.0
-T=1.0
+RE_LOSS="CE"
+FOCAL_GAMMA=2.5
 PENALTY_WEIGHT=0.01
 
-# SEEDS=(2004 1945 30 4 1975)
 SEEDS=(1920 1942 1975 1969 2004)
 
 for SEED in "${SEEDS[@]}"; do
@@ -70,7 +65,6 @@ for SEED in "${SEEDS[@]}"; do
     --new_lr $NEW_LR \
     --pretrained_lr $PRETRAINED_LR \
     --adam_epsilon $ADAM_EPSILON \
-  	--patience $PATIENCE \
     --device $DEVICE \
     --transformer $TRANSFORMER \
     --seq_process_type $SEQ_PROCESS_TYPE\
@@ -88,8 +82,5 @@ for SEED in "${SEEDS[@]}"; do
     --sc_weight $SC_WEIGHT \
     --focal_gamma $FOCAL_GAMMA \
   	--re_loss $RE_LOSS \
-    --β $BETA \
-	--η $ETA \
-  	--T $T \
   	--penalty_weight $PENALTY_WEIGHT
 done
