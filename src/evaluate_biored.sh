@@ -6,7 +6,7 @@ LOG_PATH_BASE="logs"
 
 NUM_EPOCH=40
 TRAIN_BATCH_SIZE=4
-TEST_BATCH_SIZE=4
+TEST_BATCH_SIZE=8
 UPDATE_FREQ=1
 WARMUP_RATIO=0.06
 MAX_GRAD_NORM=1.0
@@ -16,6 +16,7 @@ PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
+# DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
@@ -81,6 +82,6 @@ for SEED in "${SEEDS[@]}"; do
     --sc_temp $SC_TEMP \
     --sc_weight $SC_WEIGHT \
     --focal_gamma $FOCAL_GAMMA \
-  	--re_loss $RE_LOSS \
-  	--penalty_weight $PENALTY_WEIGHT
+    --re_loss $RE_LOSS \
+    --penalty_weight $PENALTY_WEIGHT
 done

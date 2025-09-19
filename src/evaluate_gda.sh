@@ -16,6 +16,7 @@ PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
+# DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
