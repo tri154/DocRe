@@ -190,6 +190,44 @@ class Loss:
         return loss, current_tradeoff
 
 
+    def SC_loss_ref(self, features, oh_labels):
+        labels = torch.argmax(oh_labels, dim=-1)
+        device = features.device
+        N = features.size(0)
+
+        # Normalize embeddings
+        features = F.normalize(features, dim=1)
+
+        # Similarity matrix [N, N]
+        sim_matrix = torch.matmul(features, features.T) / self.cfg.sc_temp
+
+        # Exclude self-comparisons
+        logits_mask = torch.ones_like(sim_matrix) - torch.eye(N, device=device)
+        sim_matrix = sim_matrix * logits_mask  # set diagonal to 0
+
+        # Exponentiate for denominator
+        exp_sim = torch.exp(sim_matrix) * logits_mask
+        denom = exp_sim.sum(1, keepdim=True)  # [N, 1]
+
+        # Build positive mask
+        labels = labels.contiguous().view(-1, 1)
+        pos_mask = torch.eq(labels, labels.T).float().to(device)
+        pos_mask = pos_mask * (1 - torch.eye(N, device=device))  # remove self
+
+        # Count positives per sample (N_y - 1)
+        positives_per_sample = pos_mask.sum(1)
+        positives_per_sample = torch.clamp(positives_per_sample, min=1.0)  # avoid div/0
+
+        # Compute log-prob for all pairs
+        log_prob = sim_matrix - torch.log(denom + 1e-12)
+
+        # Mean log-likelihood over positives
+        mean_log_prob_pos = (pos_mask * log_prob).sum(1) / positives_per_sample
+
+        # Final loss
+        loss = - mean_log_prob_pos.mean()
+        return loss
+
     def SC_loss(self, reps, oh_labels):
         '''
             A new loss function, that only works for single label.
@@ -241,5 +279,5 @@ class Loss:
         denominator = torch.stack([cached[k.item()] for k in pairs[0]]).to(device)
 
         loss = torch.log(numerator / (denominator + 1e-6)) * (-1 / (anchor_values - 1))
-        loss = loss.sum()
+        loss = loss.mean()
         return loss

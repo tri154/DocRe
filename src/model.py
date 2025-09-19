@@ -406,7 +406,8 @@ class Model(nn.Module):
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
-            sc_loss = self.loss.SC_loss(cnn_feat, batch_labels)
+            sc_loss = self.loss.SC_loss_ref(cnn_feat, batch_labels)
+            # sc_loss = self.loss.SC_loss(cnn_feat, batch_labels)
 
         logits = self.bilinear(h_rep, t_rep)
 
