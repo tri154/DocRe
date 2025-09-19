@@ -263,21 +263,21 @@ class Loss:
         anchor_values.apply_(val2count.get)
         anchor_values = anchor_values.to(device)
 
-        numerator = torch.exp(torch.sum(reps[pairs[0]] * reps[pairs[1]], dim=-1) / self.cfg.sc_temp).to(device)
+        numerator = (torch.sum(reps[pairs[0]] * reps[pairs[1]], dim=-1) / self.cfg.sc_temp).to(device)
 
-        unique_anchor_idx = pairs[0].unique().to(device) # 22
+        unique_anchor_idx = pairs[0].unique().to(device)
 
-        temp = reps[unique_anchor_idx] # 22, 50
+        temp = reps[unique_anchor_idx]
 
         cached = torch.matmul(temp, reps.T)
         cached = torch.exp(cached / self.cfg.sc_temp)
-        own = cached[torch.arange(len(unique_anchor_idx)), unique_anchor_idx] # 22
-        cached = torch.sum(cached, dim=1) - own # 22
+        own = cached[torch.arange(len(unique_anchor_idx)), unique_anchor_idx]
+        cached = torch.sum(cached, dim=1) - own
 
         cached = {int(i.item()): cached[idx] for idx, i in enumerate(unique_anchor_idx)}
 
         denominator = torch.stack([cached[k.item()] for k in pairs[0]]).to(device)
 
-        loss = torch.log(numerator / (denominator + 1e-6)) * (-1 / (anchor_values - 1))
+        loss = (numerator - torch.log(denominator)) * (-1 / (anchor_values - 1))
         loss = loss.mean()
         return loss
