@@ -15,8 +15,8 @@ NEW_LR=8e-5
 PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
-DEVICE="cuda:0"
-# DEVICE="cpu"
+# DEVICE="cuda:0"
+DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
@@ -31,8 +31,9 @@ LOWER_TEMP=2.0
 UPPER_TEMP=20.0
 LOSS_TRADEOFF=4.999979907145212
 
-USE_SC=False
-SC_TEMP=1.0
+USE_SC=True
+SC_TEMP_UPPER=20.0
+SC_TEMP_LOWER=2.0
 SC_WEIGHT=0.005
 
 RE_LOSS="CE"
@@ -79,7 +80,8 @@ for SEED in "${SEEDS[@]}"; do
     --upper_temp $UPPER_TEMP \
     --loss_tradeoff $LOSS_TRADEOFF \
     --use_sc $USE_SC \
-    --sc_temp $SC_TEMP \
+    --sc_temp_upper $SC_TEMP_UPPER \
+    --sc_temp_lower $SC_TEMP_LOWER \
     --sc_weight $SC_WEIGHT \
     --re_loss $RE_LOSS \
     --focal_gamma $FOCAL_GAMMA \

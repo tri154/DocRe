@@ -228,7 +228,7 @@ class Loss:
         loss = - mean_log_prob_pos.mean()
         return loss
 
-    def SC_loss(self, reps, oh_labels):
+    def SC_loss(self, reps, oh_labels, cur_epoch):
         '''
             A new loss function, that only works for single label.
         '''
@@ -241,6 +241,7 @@ class Loss:
         # reps = torch.rand(25, 50)
         # n_sample = len(reps)
         ####
+        current_temp = self.cfg.sc_temp_upper - (self.cfg.sc_temp_upper - self.cfg.sc_temp_lower) * cur_epoch/ (self.cfg.num_epoch - 1.0)
         device = self.cfg.device
         reps = F.normalize(reps, p=2, dim=1)
         n_sample = len(reps)
@@ -263,14 +264,14 @@ class Loss:
         anchor_values.apply_(val2count.get)
         anchor_values = anchor_values.to(device)
 
-        numerator = (torch.sum(reps[pairs[0]] * reps[pairs[1]], dim=-1) / self.cfg.sc_temp).to(device)
+        numerator = (torch.sum(reps[pairs[0]] * reps[pairs[1]], dim=-1) / current_temp).to(device)
 
         unique_anchor_idx = pairs[0].unique().to(device)
 
         temp = reps[unique_anchor_idx]
 
         cached = torch.matmul(temp, reps.T)
-        cached = torch.exp(cached / self.cfg.sc_temp)
+        cached = torch.exp(cached / current_temp)
         own = cached[torch.arange(len(unique_anchor_idx)), unique_anchor_idx]
         cached = torch.sum(cached, dim=1) - own
 

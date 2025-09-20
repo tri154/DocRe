@@ -54,7 +54,8 @@ def parse_args():
     parser.add_argument('--loss_tradeoff', type=float, default=1.0)
 
     parser.add_argument('--use_sc', type=str2bool, default=True)
-    parser.add_argument('--sc_temp', type=float, default=1.0)
+    parser.add_argument('--sc_temp_upper', type=float)
+    parser.add_argument('--sc_temp_lower', type=float)
     parser.add_argument('--sc_weight', type=float, default=1.0)
 
     parser.add_argument('--re_loss', type=str, default='AT')
