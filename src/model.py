@@ -8,6 +8,7 @@ from collections import deque
 from models.transformers import Transformer
 from models.custom_rgcn import CustomRGCN
 from models.cnn import CNN
+from models.pe import PositionalEncoding
 from loss import Loss
 
 class Model(nn.Module):
@@ -27,6 +28,7 @@ class Model(nn.Module):
 
         self.num_node_types = 3
         self.extractor_trans = nn.Linear(self.hidden_dim, emb_size)
+        self.pe = PositionalEncoding(emb_size, max_len=100)
 
         if self.cfg.graph_type == 'rgcn':
             self.graph_model = CustomRGCN(emb_size,
@@ -326,6 +328,15 @@ class Model(nn.Module):
         e_w = e_tw[:, 1, :]
         return e_t, e_w
 
+    def add_sentence_postional_embs(self, batch_token_embs, batch_mpos2sid, num_mention_per_doc):
+        mention_pe = self.pe(batch_mpos2sid[:, 1])
+        batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_mention_per_doc)
+        print(batch_token_embs[batch_did, batch_mpos2sid[:, 0]])
+        batch_token_embs[batch_did, batch_mpos2sid[:, 0]] += mention_pe
+        print(batch_token_embs[batch_did, batch_mpos2sid[:, 0]])
+        return batch_token_embs
+
+
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_titles = batch_input['batch_titles']
         batch_token_seqs = batch_input['batch_token_seqs']
@@ -349,8 +360,12 @@ class Model(nn.Module):
         self.cur_batch_size = len(batch_token_seqs)
 
         batch_token_embs, batch_token_atts = self.transformer(batch_token_seqs, batch_token_masks, batch_token_types)
-        batch_token_embs = self.extractor_trans(batch_token_embs)
+        batch_token_embs = self.extractor_trans(batch_token_embs) # 4, 514, 512
+        # ==================================
 
+        batch_token_embs = self.add_sentence_postional_embs(batch_token_embs, batch_mpos2sid, num_mention_per_doc)
+
+        # ==================================
         batch_token_embs = F.pad(batch_token_embs, (0, 0, 0, 1), value=self.cfg.small_negative)
 
         batch_node_embs, nodes_type, num_per_type = self.compute_node_embs(batch_token_embs,
