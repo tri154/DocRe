@@ -331,9 +331,9 @@ class Model(nn.Module):
     def add_sentence_postional_embs(self, batch_token_embs, batch_mpos2sid, num_mention_per_doc):
         mention_pe = self.pe(batch_mpos2sid[:, 1])
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_mention_per_doc)
-        print(batch_token_embs[batch_did, batch_mpos2sid[:, 0]])
+        # print(batch_token_embs[batch_did, batch_mpos2sid[:, 0]])
         batch_token_embs[batch_did, batch_mpos2sid[:, 0]] += mention_pe
-        print(batch_token_embs[batch_did, batch_mpos2sid[:, 0]])
+        # print(batch_token_embs[batch_did, batch_mpos2sid[:, 0]])
         return batch_token_embs
 
 
