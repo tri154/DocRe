@@ -340,7 +340,7 @@ class Model(nn.Module):
 
     def add_sentence_postional_embs_opt2(self, batch_token_embs, batch_mpos2sid, num_mention_per_doc):
         length = batch_token_embs.shape[1]
-        pos = torch.arange(length).to(self.cfg.device).repeat(4, 1)
+        pos = torch.arange(length).to(self.cfg.device).repeat(self.cur_batch_size, 1)
         batch_token_pe = self.pe(pos)
         res = torch.cat((batch_token_embs, batch_token_pe), dim=-1)
         return res
