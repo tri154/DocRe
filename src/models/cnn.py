@@ -55,7 +55,7 @@ class CNN(nn.Module):
         self.emb_size = emb_size
         self.inter_channel = int(emb_size // 2)
 
-        self.cc_module = CC_module(device=device)
+        self.cc_module = CC_module(in_dim=self.inter_channel, device=device)
 
         self.conv_reason_e_l1 = nn.Sequential(
             nn.Conv2d(emb_size, self.inter_channel, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2)),

@@ -37,10 +37,12 @@ def parse_args():
     parser.add_argument("--pretrained_lr", type=float, default=5e-5)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
 
-
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--transformer', type=str, default='bert-base-cased')
     parser.add_argument('--seq_process_type', type=str, default='sd', help='choose type of sequence prcess, sd: sliding windows, o: original (as SAIS)')
+
+    parser.add_argument('--pe_dim', type=int)
+    parser.add_argument('--pe_max_length', type=int)
 
     parser.add_argument('--graph_type', type=str, default='rgcn')
     parser.add_argument('--num_bases', type=int, default=0, help='rgcn regularization factors')

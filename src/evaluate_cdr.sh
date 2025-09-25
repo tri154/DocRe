@@ -20,6 +20,9 @@ DEVICE="cuda:0"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
+PE_DIM=128
+PE_MAX_LENGTH=1500
+
 GRAPH_TYPE='rgcn'
 NUM_BASES=2
 TYPE_DIM=20
@@ -69,6 +72,8 @@ for SEED in "${SEEDS[@]}"; do
     --device $DEVICE \
     --transformer $TRANSFORMER \
     --seq_process_type $SEQ_PROCESS_TYPE\
+    --pe_dim $PE_DIM \
+    --pe_max_length $PE_MAX_LENGTH \
     --graph_type $GRAPH_TYPE\
     --num_bases $NUM_BASES\
     --type_dim $TYPE_DIM \
