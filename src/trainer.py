@@ -179,11 +179,23 @@ class Trainer:
             total_loss += batch_loss.item()
             (batch_loss / self.cfg.update_freq).backward()
 
-            if idx_batch % self.cfg.update_freq == 0 or idx_batch == num_batch - 1:
+            is_final_batch = idx_batch == num_batch - 1
+            is_updated = idx_batch % self.cfg.update_freq == 0 or is_final_batch
+            is_evaluated = is_final_batch or (self.cfg.evaluation_freq > 0 and idx_batch % self.cfg.evaluation_freq == 0 and is_updated)
+
+            if is_updated:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
                 self.opt.step()
                 self.opt.zero_grad()
                 self.sched.step()
+
+            if is_evaluated:
+                d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
+                if d_f1 > self.best_f1_dev:
+                    self.cfg.logging(f"batch id: {idx_batch}, Dev result : TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
+                    self.best_f1_dev = d_f1
+                    torch.save(self.model.state_dict(), self.cfg.save_path)
+
         return total_loss
 
 
@@ -193,17 +205,11 @@ class Trainer:
 
         self.best_f1_dev = 0
         for idx_epoch in range(num_epoches):
-            self.cfg.logging(f'epoch {idx_epoch}/{num_epoches} ' + '=' * 100, is_printed=True)
+            self.cfg.logging(f'epoch {idx_epoch + 1}/{num_epoches} ' + '=' * 100, is_printed=True)
 
             epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
 
-            d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
-
-            self.cfg.logging(f"epoch: {idx_epoch}, Dev result : loss={epoch_loss}, TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
-
-            if d_f1 > self.best_f1_dev:
-                self.best_f1_dev = d_f1
-                torch.save(self.model.state_dict(), self.cfg.save_path)
+            self.cfg.logging(f"epoch: {idx_epoch + 1}, loss={epoch_loss} .", is_printed=True)
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
