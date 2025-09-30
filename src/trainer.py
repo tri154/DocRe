@@ -191,8 +191,8 @@ class Trainer:
 
             if is_evaluated:
                 d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
+                self.cfg.logging(f"batch id: {idx_batch}, Dev result : TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
                 if d_f1 > self.best_f1_dev:
-                    self.cfg.logging(f"batch id: {idx_batch}, Dev result : TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
                     self.best_f1_dev = d_f1
                     torch.save(self.model.state_dict(), self.cfg.save_path)
 
