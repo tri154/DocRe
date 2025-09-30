@@ -181,7 +181,7 @@ class Trainer:
 
             is_final_batch = idx_batch == num_batch - 1
             is_updated = idx_batch % self.cfg.update_freq == 0 or is_final_batch
-            is_evaluated = is_final_batch or (self.cfg.evaluation_freq > 0 and idx_batch % self.cfg.evaluation_freq == 0 and is_updated)
+            is_evaluated = is_final_batch or (self.cfg.evaluation_freq > 0 and idx_batch % self.cfg.evaluation_freq == 0 and idx_batch != 0 and is_updated)
 
             if is_updated:
                 clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm)
