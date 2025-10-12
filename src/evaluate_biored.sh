@@ -1,3 +1,4 @@
+# 73.27 +- 1.2
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 DATASET="biored"
 
@@ -16,7 +17,6 @@ PRETRAINED_LR=1.472039003976042e-05
 ADAM_EPSILON=1e-6
 
 DEVICE="cuda:0"
-# DEVICE="cpu"
 TRANSFORMER="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 SEQ_PROCESS_TYPE="sd"
 
@@ -33,7 +33,7 @@ LOSS_TRADEOFF=4.999979907145212
 
 USE_SC=True
 SC_TEMP=1.0
-SC_WEIGHT=0.005
+SC_WEIGHT=1.0
 
 RE_LOSS="CE"
 FOCAL_GAMMA=2.5
@@ -82,6 +82,6 @@ for SEED in "${SEEDS[@]}"; do
     --sc_temp $SC_TEMP \
     --sc_weight $SC_WEIGHT \
     --focal_gamma $FOCAL_GAMMA \
-    --re_loss $RE_LOSS \
-    --penalty_weight $PENALTY_WEIGHT
+  	--re_loss $RE_LOSS \
+  	--penalty_weight $PENALTY_WEIGHT
 done
