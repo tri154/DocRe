@@ -246,7 +246,7 @@ class Model(nn.Module):
         device = self.cfg.device
         relation_map = list()
         max_entity_per_doc = max(num_entity_per_doc)
-        batch_entity_embs =  torch.split(gcn_nodes[-1][:torch.sum(num_entity_per_doc)], num_entity_per_doc.tolist())
+        batch_entity_embs = torch.split(gcn_nodes[-1][:torch.sum(num_entity_per_doc)], num_entity_per_doc.tolist())
         for did in range(self.cur_batch_size):
             doc_entity_embs = batch_entity_embs[did]
             e_s_map = torch.einsum('ij, jk -> jik', doc_entity_embs, doc_entity_embs.T).to(device)
@@ -348,6 +348,7 @@ class Model(nn.Module):
 
         self.cur_batch_size = len(batch_token_seqs)
 
+        # PLM encoding
         batch_token_embs, batch_token_atts = self.transformer(batch_token_seqs, batch_token_masks, batch_token_types)
         batch_token_embs = self.extractor_trans(batch_token_embs)
 
@@ -378,11 +379,14 @@ class Model(nn.Module):
                 ment_ment_links,
                 ent_ent_links,
                 ent_sent_links]
+        # RGCN model
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
+        # CNN net
         relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
 
+        # concat features
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
         gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
 
@@ -401,6 +405,7 @@ class Model(nn.Module):
 
         h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
         t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
+        breakpoint()
         h_rep = self.w_h(h_rep)
         t_rep = self.w_t(t_rep)
 
@@ -408,11 +413,13 @@ class Model(nn.Module):
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(cnn_feat, batch_labels)
 
+        # bilinear
         logits = self.bilinear(h_rep, t_rep)
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
 
+        # loss
         re_loss = self.loss.cal_loss(logits, batch_labels)
 
         kd_loss = torch.tensor(0.0)

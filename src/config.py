@@ -75,6 +75,7 @@ class Config:
     def __init__(self, args=None):
         args = parse_args() if args is None else args
         self.__dict__.update(vars(args))
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # process other configurations.
         self.set_seed()
