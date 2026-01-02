@@ -159,13 +159,13 @@ class Tester:
 
         return total_tp, total_fp, total_fn, precision, recall, f1
 
-    def test(self, model, dataset='dev'):
+    def test(self, model ,run_both, dataset='dev'):
         model.eval()
         all_preds = list()
         all_labels = list()
         with torch.no_grad():
             for idx_batch, batch_inputs in enumerate(self.prepare_batch(self.cfg.test_batch_size, dataset)):
-                batch_preds, batch_labels = model(batch_inputs, is_training=False)
+                batch_preds, batch_labels = model(batch_inputs, is_training=False, run_both=run_both)
                 all_preds.append(batch_preds)
                 all_labels.append(batch_labels)
 

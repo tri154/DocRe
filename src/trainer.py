@@ -18,7 +18,7 @@ class Trainer:
         self.tester = tester
         self.cur_epoch = 0
 
-        self.opt, self.sched = self.prepare_optimizer_scheduler()
+        # self.opt, self.sched = self.prepare_optimizer_scheduler()
 
 
     # doc_data = {'doc_tokens': doc_tokens, # list of token id of the doc. single dimension single dimension.
@@ -162,7 +162,7 @@ class Trainer:
         for did, doc_idx in enumerate(range(indicies[0], indicies[1])):
             self.train_set[doc_idx]['teacher_logits'] = batch_logits[did]
 
-    def train_one_epoch(self, current_epoch, batch_size, no_tqdm=False):
+    def train_one_epoch(self, current_epoch, batch_size, run_both, no_tqdm=False):
         self.model.train()
         self.opt.zero_grad()
 
@@ -173,8 +173,8 @@ class Trainer:
 
         total_loss = 0.0
         for idx_batch, batch_input in enumerate(tqdm(self.prepare_batch(batch_size), total=num_batch, disable=no_tqdm)):
-            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True)
-            if self.cfg.use_psd:
+            batch_loss, batch_logits = self.model(batch_input, current_epoch=current_epoch, is_training=True, run_both=run_both)
+            if self.cfg.use_psd and batch_logits is not None:
                 self.PSD_add_logits(batch_logits, batch_input['indices'])
             total_loss += batch_loss.item()
             (batch_loss / self.cfg.update_freq).backward()
@@ -190,7 +190,7 @@ class Trainer:
                 self.sched.step()
 
             if is_evaluated:
-                d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev')
+                d_tp, d_fp, d_fn, d_presicion, d_recall, d_f1 = self.tester.test(self.model, dataset='dev', run_both=run_both)
                 self.cfg.logging(f"batch id: {idx_batch}, Dev result : TP={d_tp}, FP={d_fp}, FN={d_fn}, P={d_presicion:.10f}, R={d_recall:.10f}, F1={d_f1:.10f}.", is_printed=True)
                 if d_f1 > self.best_f1_dev:
                     self.best_f1_dev = d_f1
@@ -199,7 +199,10 @@ class Trainer:
         return total_loss
 
 
-    def train(self, num_epoches, batch_size, train_set=None, no_tqdm=False):
+    def train(self, num_epoches, batch_size, run_both, train_set=None, no_tqdm=False):
+        self.opt, self.sched = self.prepare_optimizer_scheduler()
+        self.cur_epoch = 0
+
         if train_set is not None:
             self.train_set = train_set
 
@@ -207,13 +210,13 @@ class Trainer:
         for idx_epoch in range(num_epoches):
             self.cfg.logging(f'epoch {idx_epoch + 1}/{num_epoches} ' + '=' * 100, is_printed=True)
 
-            epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm)
+            epoch_loss = self.train_one_epoch(idx_epoch, batch_size, no_tqdm=no_tqdm, run_both=run_both)
 
             self.cfg.logging(f"epoch: {idx_epoch + 1}, loss={epoch_loss} .", is_printed=True)
             self.cur_epoch += 1
 
         self.model.load_state_dict(torch.load(self.cfg.save_path, map_location=self.cfg.device))
-        t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test')
+        t_tp, t_fp, t_fn, self.precision_test, self.recall_test, self.f1_test = self.tester.test(self.model, dataset='test', run_both=run_both)
         self.cfg.logging(f"Test result: TP={t_tp}, FP={t_fp}, FN={t_fn}, P={self.precision_test:.10f}, R={self.recall_test:.10f}, F1={self.f1_test:.10f}", is_printed=True)
 
         return self.best_f1_dev

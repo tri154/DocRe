@@ -405,7 +405,7 @@ class Model(nn.Module):
 
 
 
-    def forward(self, batch_input, current_epoch=None, is_training=False):
+    def forward(self, batch_input, run_both, current_epoch=None, is_training=False):
         batch_titles = batch_input['batch_titles']
         batch_token_seqs = batch_input['batch_token_seqs']
         batch_token_masks = batch_input['batch_token_masks']
@@ -483,7 +483,11 @@ class Model(nn.Module):
         new_orders = None
         if is_training:
             pre_loss = self.loss.cal_loss(pre_logits, batch_labels)
+            if not run_both:
+                return pre_loss, None
         else:
+            if not run_both:
+                return self.loss.predict(pre_logits), batch_labels
             new_orders = self.get_new_orders(pre_logits, num_rel_per_doc, num_entity_per_doc, head_entities, tail_entities)
 
         relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc, new_orders=new_orders)
