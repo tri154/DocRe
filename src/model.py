@@ -74,6 +74,30 @@ class Model(nn.Module):
         )
 
         self.bilinear = nn.Bilinear(emb_size // 2, emb_size // 2, self.cfg.num_rel)
+        self.final_bilinear = lambda h_rep, t_rep: self.bilinear(self.w_h(h_rep), self.w_t(t_rep))
+
+
+        self.w_h_pre = nn.Sequential(
+            nn.Linear(emb_size * 2, emb_size),
+            nn.LayerNorm(emb_size),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+
+            nn.Linear(emb_size, emb_size // 2),
+            nn.LayerNorm(emb_size // 2),
+            nn.Tanh()
+        )
+        self.w_t_pre = nn.Sequential(
+            nn.Linear(emb_size * 2, emb_size),
+            nn.LayerNorm(emb_size),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+
+            nn.Linear(emb_size, emb_size // 2),
+            nn.LayerNorm(emb_size // 2),
+            nn.Tanh()
+        )
+        self.pre_bilinear = lambda pre_h, pre_t: self.bilinear(self.w_h_pre(pre_h), self.w_t_pre(pre_t))
 
         self.loss = Loss(cfg)
 
@@ -242,13 +266,16 @@ class Model(nn.Module):
         return res
 
 
-    def get_relation_map(self, gcn_nodes, num_entity_per_doc):
+    def get_relation_map(self, gcn_nodes, num_entity_per_doc, new_orders=None):
         device = self.cfg.device
         relation_map = list()
         max_entity_per_doc = max(num_entity_per_doc)
         batch_entity_embs = torch.split(gcn_nodes[-1][:torch.sum(num_entity_per_doc)], num_entity_per_doc.tolist())
         for did in range(self.cur_batch_size):
             doc_entity_embs = batch_entity_embs[did]
+            if new_orders is not None:
+                new_order = torch.tensor(new_orders[did], device=device)
+                doc_entity_embs = doc_entity_embs[new_order]
             e_s_map = torch.einsum('ij, jk -> jik', doc_entity_embs, doc_entity_embs.T).to(device)
             offset = max_entity_per_doc - num_entity_per_doc[did]
             if offset > 0:
@@ -292,9 +319,22 @@ class Model(nn.Module):
         entity_t = self.ht_extractor(entity_t)
         return entity_h, entity_t
 
-    def compute_cnn_features(self, relation_map, head_entities, tail_entities, num_rel_per_doc):
+    def compute_cnn_features(self, relation_map, head_entities, tail_entities, num_rel_per_doc, new_orders=None):
         device = self.cfg.device
         batch_did = torch.arange(self.cur_batch_size).repeat_interleave(num_rel_per_doc).to(device)
+        if new_orders is not None:
+            head_entities_split = torch.split(head_entities.cpu(), num_rel_per_doc.tolist())
+            tail_entities_split = torch.split(tail_entities.cpu(), num_rel_per_doc.tolist())
+            new_head = list()
+            new_tail = list()
+            for h, t, new_order in zip(head_entities_split, tail_entities_split, new_orders):
+                mapping = {i: index for index, i in enumerate(new_order)}
+                new_h = [mapping[int(i)] for i in h]
+                new_t = [mapping[int(i)] for i in t]
+                new_head.extend(new_h)
+                new_tail.extend(new_t)
+            head_entities = new_head
+            tail_entities = new_tail
         relation = relation_map[batch_did, :, head_entities, tail_entities] # 14, 512
         return relation
 
@@ -325,6 +365,45 @@ class Model(nn.Module):
         e_t = e_tw[:, 0, :]
         e_w = e_tw[:, 1, :]
         return e_t, e_w
+
+    def get_new_orders(self, pre_logits,
+                       num_rel_per_doc,
+                       num_entity_per_doc,
+                       head_entities,
+                       tail_entities,
+                       ):
+        class_id = self.cfg.data_rel2id[self.cfg.rel]
+        pre_prob = torch.softmax(pre_logits, dim=-1).cpu()
+        batch_rel_prob = torch.split(pre_prob[:, class_id], num_rel_per_doc.tolist())
+        head_entities_split = torch.split(head_entities, num_rel_per_doc.tolist())
+        tail_entities_split = torch.split(tail_entities, num_rel_per_doc.tolist())
+        new_orders = list()
+
+        for i in range(self.cur_batch_size):
+            rel_probs = batch_rel_prob[i].cpu()
+            head_entity = head_entities_split[i].cpu()
+            tail_entity = tail_entities_split[i].cpu()
+            num_entity = num_entity_per_doc[i].cpu()
+            order = list()
+            checking = torch.zeros(num_entity, dtype=bool)
+            rel_probs_sorted, indices = torch.sort(rel_probs)
+            head_entity_sorted = head_entity[indices]
+            tail_entity_sorted = tail_entity[indices]
+            for h, t in zip(head_entity_sorted, tail_entity_sorted):
+                if not checking[h]:
+                    order.append(int(h))
+                    checking[h] = True
+                if not checking[t]:
+                    order.append(int(t))
+                    checking[t] = True
+            if not checking.all():
+                remains = torch.where(~checking)[0]
+                order.extend(remains.tolist())
+            new_orders.append(order)
+
+        return new_orders
+
+
 
     def forward(self, batch_input, current_epoch=None, is_training=False):
         batch_titles = batch_input['batch_titles']
@@ -361,7 +440,7 @@ class Model(nn.Module):
                                                                           num_entity_per_doc,
                                                                           num_mention_per_doc)
 
-        #nodes order:
+        # nodes order:
         # doc1_e1, doc1_e2 ... doc1_en, doc2_e1, ...
         # doc1_e1_mention_1, doc1_e1_mention2, ...
         # doc1_sent1, doc1_sent2, ...
@@ -381,17 +460,10 @@ class Model(nn.Module):
                 ent_sent_links]
         # RGCN model
         gcn_nodes = self.graph_model(batch_node_embs, nodes_type, edges)
-
-        relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc)
-        # CNN net
-        relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
-
-        # concat features
+        # =========================================
         head_entities, tail_entities, batch_labels, offsets, num_rel_per_doc = self.get_entity_pairs(batch_epair_rels, num_entity_per_doc)
-        gcn_nodes = torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1)
+        graph_feat_h, graph_feat_t = self.compute_graph_features(torch.cat([gcn_nodes[0], gcn_nodes[-1]], dim=-1), head_entities, tail_entities, offsets)
 
-        graph_feat_h, graph_feat_t = self.compute_graph_features(gcn_nodes, head_entities, tail_entities, offsets)
-        cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc)
         batch_token_atts = F.pad(batch_token_atts, ((0, 0, 0, 1)), value=0.0)
         att_feat_h, att_feat_t = self.compute_att_features(batch_token_embs,
                                                            batch_token_atts,
@@ -402,19 +474,34 @@ class Model(nn.Module):
                                                            num_mention_per_entity,
                                                            num_rel_per_doc,
                                                            batch_titles)
+        # assumption: data is already in the best desired position.
+        h_rep = torch.cat([att_feat_h, graph_feat_h], dim=-1)
+        t_rep = torch.cat([att_feat_t, graph_feat_t], dim=-1)
+        pre_logits = self.pre_bilinear(h_rep, t_rep)
 
-        h_rep = torch.cat([cnn_feat, att_feat_h, graph_feat_h], dim=-1)
-        t_rep = torch.cat([cnn_feat, att_feat_t, graph_feat_t], dim=-1)
-        breakpoint()
-        h_rep = self.w_h(h_rep)
-        t_rep = self.w_t(t_rep)
+        pre_loss = 0.0
+        new_orders = None
+        if is_training:
+            pre_loss = self.loss.cal_loss(pre_logits, batch_labels)
+        else:
+            new_orders = self.get_new_orders(pre_logits, num_rel_per_doc, num_entity_per_doc, head_entities, tail_entities)
+
+        relation_map = self.get_relation_map(gcn_nodes, num_entity_per_doc, new_orders=new_orders)
+        relation_map = self.cnn(relation_map) # 4, 512, n_e_max, n_e_max
+        cnn_feat = self.compute_cnn_features(relation_map, head_entities, tail_entities, num_rel_per_doc, new_orders=new_orders)
+        # ======================================
+
+        # concat features
+        h_rep = torch.cat([cnn_feat, h_rep], dim=-1)
+        t_rep = torch.cat([cnn_feat, t_rep], dim=-1)
 
         sc_loss = 0
         if is_training and self.cfg.use_sc:
             sc_loss = self.loss.SC_loss(cnn_feat, batch_labels)
 
         # bilinear
-        logits = self.bilinear(h_rep, t_rep)
+        logits = self.final_bilinear(h_rep, t_rep)
+
 
         if not is_training:
             return self.loss.predict(logits), batch_labels
@@ -428,6 +515,7 @@ class Model(nn.Module):
             kd_loss, current_tradeoff = self.loss.PSD_loss(logits, batch_teacher_logits, current_epoch)
 
         loss = 0.0
+        loss += pre_loss
         loss += re_loss
         loss += current_tradeoff * kd_loss
         loss += self.cfg.sc_weight * sc_loss
