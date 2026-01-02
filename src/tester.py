@@ -159,7 +159,7 @@ class Tester:
 
         return total_tp, total_fp, total_fn, precision, recall, f1
 
-    def test(self, model ,run_both, dataset='dev'):
+    def test(self, model, run_both, dataset='dev'):
         model.eval()
         all_preds = list()
         all_labels = list()

@@ -386,7 +386,7 @@ class Model(nn.Module):
             num_entity = num_entity_per_doc[i].cpu()
             order = list()
             checking = torch.zeros(num_entity, dtype=bool)
-            rel_probs_sorted, indices = torch.sort(rel_probs)
+            rel_probs_sorted, indices = torch.sort(rel_probs, descending=True)
             head_entity_sorted = head_entity[indices]
             tail_entity_sorted = tail_entity[indices]
             for h, t in zip(head_entity_sorted, tail_entity_sorted):
